@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import type { PreviewRequest } from '../api/types'
-import { usePreview, useSelection } from '../api/hooks'
+import { usePreview, useGhost } from '../api/hooks'
 import { Card, Skeleton } from './ui'
 import { Eye, TrendingDown, ArrowRight } from 'lucide-react'
 
@@ -10,19 +10,19 @@ export interface PreviewCardProps {
 }
 
 export const PreviewCard: React.FC<PreviewCardProps> = ({ request, currentScore = 41 }) => {
-  const { setGhostView } = useSelection()
+  const { setGhost } = useGhost()
   const previewMutation = usePreview()
 
   useEffect(() => {
     if (!request) {
-      setGhostView(null)
+      setGhost(null)
       return
     }
 
     const timer = setTimeout(() => {
       previewMutation.mutate(request, {
         onSuccess: (data) => {
-          setGhostView(data.ghost)
+          setGhost(data.ghost)
         },
       })
     }, 400)
@@ -34,7 +34,7 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({ request, currentScore 
 
   useEffect(() => {
     return () => {
-      setGhostView(null)
+      setGhost(null)
     }
   }, [])
 

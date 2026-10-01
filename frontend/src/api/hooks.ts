@@ -24,6 +24,7 @@ import type {
 } from './types'
 
 export { SelectionProvider, useSelection } from './SelectionContext'
+export { GhostProvider, useGhost } from './GhostContext'
 
 // Queries
 export function useHealth() {

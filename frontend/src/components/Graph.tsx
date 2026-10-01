@@ -1,6 +1,7 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useState, useCallback } from 'react'
 import cytoscape from 'cytoscape'
 import type { GraphView, RiskBand } from '../api/types'
+import { useGhost } from '../api/hooks'
 import { Maximize2, ZoomIn, ZoomOut, HelpCircle, Eye } from 'lucide-react'
 
 export interface GraphRef {
@@ -20,6 +21,9 @@ export interface GraphProps {
 
 export const Graph = forwardRef<GraphRef, GraphProps>(
   ({ view, selectedId, highlightIds, onSelect, ghost, height = 480, className = '' }, ref) => {
+    const { ghost: contextGhost } = useGhost()
+    const effectiveGhost = ghost !== undefined ? ghost : contextGhost
+
     const containerRef = useRef<HTMLDivElement>(null)
     const cyRef = useRef<cytoscape.Core | null>(null)
     const [showLegend, setShowLegend] = useState(true)
@@ -276,8 +280,8 @@ export const Graph = forwardRef<GraphRef, GraphProps>(
 
       // Combine view nodes and ghost nodes
       const allNodes = [...(view?.nodes ?? [])]
-      if (ghost?.nodes) {
-        ghost.nodes.forEach((gn) => {
+      if (effectiveGhost?.nodes) {
+        effectiveGhost.nodes.forEach((gn) => {
           if (!allNodes.some((n) => n.id === gn.id)) {
             allNodes.push({ ...gn, ghost: true })
           }
@@ -364,8 +368,8 @@ export const Graph = forwardRef<GraphRef, GraphProps>(
 
       // Add Edges
       const allEdges = [...(view?.edges ?? [])]
-      if (ghost?.edges) {
-        ghost.edges.forEach((ge) => {
+      if (effectiveGhost?.edges) {
+        effectiveGhost.edges.forEach((ge) => {
           allEdges.push({ ...ge, ghost: true })
         })
       }
@@ -385,7 +389,7 @@ export const Graph = forwardRef<GraphRef, GraphProps>(
       cy.elements().remove()
       cy.add(elements)
       cy.fit(undefined, 36)
-    }, [view, ghost, height])
+    }, [view, effectiveGhost, height])
 
     // Highlight & Selection synchronization
     useEffect(() => {

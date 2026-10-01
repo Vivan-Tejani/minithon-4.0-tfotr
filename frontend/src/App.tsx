@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider, globalToast } from './components/ui'
-import { SelectionProvider } from './api/hooks'
+import { SelectionProvider, GhostProvider } from './api/hooks'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { Accounts } from './pages/Accounts'
@@ -34,15 +34,17 @@ export function App() {
       <ToastProvider>
         <SelectionProvider>
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="accounts" element={<Accounts />} />
-                <Route path="fixes" element={<Fixes />} />
-                <Route path="scenarios" element={<Scenarios />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-            </Routes>
+            <GhostProvider>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="accounts" element={<Accounts />} />
+                  <Route path="fixes" element={<Fixes />} />
+                  <Route path="scenarios" element={<Scenarios />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
+              </Routes>
+            </GhostProvider>
           </BrowserRouter>
         </SelectionProvider>
       </ToastProvider>
