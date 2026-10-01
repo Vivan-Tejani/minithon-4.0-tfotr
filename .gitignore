@@ -43,3 +43,4 @@ dist/
 .DS_Store
 *.local
 .env
+.frontend_local_backup/

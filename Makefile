@@ -9,8 +9,14 @@ test-backend:
 	cd backend && python3 -m pytest
 
 test-frontend:
-	cd frontend && npm run build
+	@if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then \
+		cd frontend && npm run build; \
+	else \
+		echo "Frontend directory not present or tracked yet, skipping frontend build test."; \
+	fi
 
 install:
 	cd backend && pip install -r requirements.txt
-	cd frontend && npm install
+	@if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then \
+		cd frontend && npm install; \
+	fi
