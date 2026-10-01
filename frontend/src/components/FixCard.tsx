@@ -20,6 +20,7 @@ export const FixCard: React.FC<FixCardProps> = ({
 }) => {
   return (
     <Card
+      id={`fix-card-${fix.id.replace(/:/g, '-')}`}
       className={`border transition-all duration-150 ${
         fix.in_best3 ? 'border-cyan-700/60 bg-[#0e1627]' : 'border-[#1c2638] bg-[#0d131f]'
       }`}
@@ -75,6 +76,7 @@ export const FixCard: React.FC<FixCardProps> = ({
           <div className="flex items-center gap-2">
             {onPreview && (
               <Button
+                id={`preview-btn-${fix.id.replace(/:/g, '-')}`}
                 variant="ghost"
                 size="sm"
                 onClick={() => onPreview(fix.id)}
@@ -84,6 +86,7 @@ export const FixCard: React.FC<FixCardProps> = ({
               </Button>
             )}
             <Button
+              id={`apply-btn-${fix.id.replace(/:/g, '-')}`}
               variant={fix.in_best3 ? 'primary' : 'secondary'}
               size="sm"
               loading={isApplying}

@@ -408,3 +408,10 @@ def run_scenario(payload: ScenarioPayload):
 
 
 app.include_router(api_router)
+
+try:
+    from app.routes_m3 import router as router_m3
+except ImportError:
+    from backend.app.routes_m3 import router as router_m3
+
+app.include_router(router_m3, prefix="/api")
