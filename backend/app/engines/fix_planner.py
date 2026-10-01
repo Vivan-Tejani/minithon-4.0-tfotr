@@ -28,7 +28,7 @@ def _reference_build_graph(state: State, catalog: dict[str, CatalogEntry], setti
     entries["E_PHONE"] = settings.p_phone
     for a in state.accounts:
         cat = catalog.get(a.service_key)
-        bc = cat.breach_count_5y if cat else 0
+        bc = (cat.get("breach_count_5y", 0) if isinstance(cat, dict) else getattr(cat, "breach_count_5y", 0)) if cat else 0
         p = min(settings.leak_cap, settings.leak_base + settings.leak_per_breach * bc)
         if a.breach_flag:
             p = max(p, settings.leak_flagged_min)
@@ -88,7 +88,7 @@ def _reference_build_graph(state: State, catalog: dict[str, CatalogEntry], setti
             if m.startswith("sso:"):
                 methods.append([f"ACC:{m.split(':', 1)[1]}"])
 
-        bypasses = cat.recovery_bypasses_2fa if cat else True
+        bypasses = (cat.get("recovery_bypasses_2fa", True) if isinstance(cat, dict) else getattr(cat, "recovery_bypasses_2fa", True)) if cat else True
         rec_factor = [] if bypasses else factor_caps
 
         for r in a.recovery:
@@ -181,8 +181,12 @@ def evaluate_state(
 ) -> dict[str, Any]:
     """Unified evaluator that delegates to M1/M2 when present, else reference."""
     try:
-        from backend.app.engines.gate_builder import build_graph
-        from backend.app.engines.simulator import evaluate
+        try:
+            from app.engines.gate_builder import build_graph
+            from app.engines.simulator import evaluate
+        except ImportError:
+            from backend.app.engines.gate_builder import build_graph
+            from backend.app.engines.simulator import evaluate
         g = build_graph(state, catalog, settings)
         return evaluate(g, settings, forced=forced, trials=trials)
     except Exception:

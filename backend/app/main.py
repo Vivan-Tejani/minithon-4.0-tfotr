@@ -77,6 +77,71 @@ def get_account_paths(account_id: str):
     return {"paths": target.get("top_paths", [])}
 
 
+@api_router.get("/compare")
+def get_compare():
+    """Baseline checklist vs Chokepoint graph planner comparison (PRD §6 M2-09)."""
+    state = store.load_state()
+    catalog = service.load_catalog()
+    cat_map = {c.get("key", ""): c for c in catalog}
+
+    try:
+        from app.engines.fix_planner import plan, evaluate_state
+        from app.engines.fix_library import apply_fix, generate_candidates
+        from app.engines.baseline import naive_plan
+    except ImportError:
+        from backend.app.engines.fix_planner import plan, evaluate_state
+        from backend.app.engines.fix_library import apply_fix, generate_candidates
+        from backend.app.engines.baseline import naive_plan
+
+    # 1. Chokepoint plan
+    plan_res = plan(state=state, catalog=cat_map, k_full=3)
+    chokepoint_top3 = [
+        {"id": f["id"], "title": f["title"]}
+        for f in plan_res["plan"][:3]
+    ]
+    chokepoint_score_after = (
+        plan_res["plan"][min(2, len(plan_res["plan"]) - 1)]["score_after"]
+        if plan_res["plan"]
+        else plan_res.get("base_score", 100)
+    )
+
+    # 2. Naive checklist plan
+    naive_fix_ids = naive_plan(state)
+    candidates = generate_candidates(state, cat_map)
+    candidates_by_id = {c.id: c for c in candidates}
+
+    baseline_top3 = []
+    curr_state = state
+    for fid in naive_fix_ids[:3]:
+        title = candidates_by_id[fid].title if fid in candidates_by_id else fid
+        baseline_top3.append({"id": fid, "title": title})
+        curr_state = apply_fix(curr_state, fid, cat_map)
+
+    ev_baseline = evaluate_state(curr_state, cat_map, state.settings)
+    baseline_score_after = ev_baseline["score"]
+
+    explanation = (
+        "Independent checkers fix single high-reuse nodes first; Chokepoint identifies "
+        "correlated root gates (SIM swap and central email inbox)."
+    )
+
+    return {
+        "baseline_top3": baseline_top3,
+        "chokepoint_top3": chokepoint_top3,
+        "baseline_score_after": baseline_score_after,
+        "chokepoint_score_after": chokepoint_score_after,
+        "divergence_explanation": explanation,
+        "naive": {
+            "plan": [f["id"] for f in baseline_top3],
+            "score_after": baseline_score_after,
+        },
+        "ours": {
+            "plan": [f["id"] for f in chokepoint_top3],
+            "score_after": chokepoint_score_after,
+        },
+    }
+
+
 @api_router.put("/anchors", response_model=Anchors)
 def update_anchors(anchors: Anchors):
     state = store.load_state()

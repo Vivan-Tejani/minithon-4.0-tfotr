@@ -127,3 +127,22 @@ def test_paths_endpoint_and_integration():
     assert scen_data["falls"] == 9
     assert len(scen_data["next_actions"]) > 0
 
+
+def test_compare_endpoint():
+    client.post("/api/seed/demo")
+    res = client.get("/api/compare")
+    assert res.status_code == 200
+    data = res.json()
+    # Check PRD keys
+    assert "naive" in data
+    assert "ours" in data
+    assert "divergence_explanation" in data
+    # Check frontend BaselineCompare keys
+    assert "baseline_top3" in data
+    assert "chokepoint_top3" in data
+    assert "baseline_score_after" in data
+    assert "chokepoint_score_after" in data
+    assert len(data["baseline_top3"]) > 0
+    assert len(data["chokepoint_top3"]) > 0
+    assert data["chokepoint_score_after"] >= data["baseline_score_after"]
+

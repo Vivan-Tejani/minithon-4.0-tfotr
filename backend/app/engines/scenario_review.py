@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import asdict, dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -117,7 +117,7 @@ def add_snapshot(
 ) -> dict[str, Any]:
     """Record a snapshot into the database."""
     conn = init_db(db_path)
-    now_ts = ts or datetime.utcnow().isoformat() + "Z"
+    now_ts = ts or datetime.now(timezone.utc).isoformat()
     cur = conn.execute(
         "INSERT INTO snapshots (ts, score, el, label) VALUES (?, ?, ?, ?)",
         (now_ts, score, round(el, 2), label),
@@ -161,7 +161,7 @@ def add_event(
 ) -> dict:
     """Add an event to the events log."""
     conn = init_db(db_path)
-    now_ts = ts or datetime.utcnow().isoformat() + "Z"
+    now_ts = ts or datetime.now(timezone.utc).isoformat()
     detail_str = json.dumps(detail) if isinstance(detail, dict) else str(detail)
     cur = conn.execute(
         "INSERT INTO events (ts, kind, title, detail_json) VALUES (?, ?, ?, ?)",
@@ -369,7 +369,7 @@ def run_review(
                     kind="review",
                     title=item.title,
                     detail={"item_id": item.id, "as_of": as_of_str, "severity": item.severity},
-                    ts=datetime.utcnow().isoformat() + "Z",
+                    ts=datetime.now(timezone.utc).isoformat(),
                     db_path=db_path,
                 )
                 existing_records.add(key)

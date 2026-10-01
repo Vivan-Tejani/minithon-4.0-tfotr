@@ -1,7 +1,7 @@
 """FastAPI routes owned by M3 track."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from fastapi import APIRouter, Body, HTTPException, Query, Path
 from pydantic import BaseModel
@@ -91,7 +91,7 @@ def complete_review(payload: ReviewCompleteRequest | None = Body(default=None)) 
     add_event(
         kind="review_complete",
         title="Privacy review completed",
-        detail={"as_of": as_of_val, "ts": datetime.utcnow().isoformat() + "Z"},
+        detail={"as_of": as_of_val, "ts": datetime.now(timezone.utc).isoformat()},
     )
 
     return {
