@@ -19,18 +19,21 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Virtual environments
 .venv
 venv/
 ENV/
 env/
 
-# Testing & cache
+# Testing
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Local databases & state
+# Local databases & data
 backend/.data/
+.data/
 *.db
 *.sqlite3
 
