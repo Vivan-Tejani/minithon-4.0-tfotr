@@ -84,12 +84,13 @@ npm run dev
 
 ---
 
-## Loading the Demo Persona
+## Loading the Demo Persona & Running the 3-Minute Demo
 
-1. Open `http://localhost:5173/accounts`.
-2. Click the **"Load Demo Persona"** button in the header.
+1. Open `http://localhost:5173/`.
+2. Click the **"Load Persona"** button in the header.
 3. This seeds the 12 realistic demo accounts (Gmail, Amazon, UPI, Netflix, Canva, etc.) with calibrated breach flags, SIM anchors, and shared password groups.
 4. Watch the accounts table, risk bands, and threat metrics populate immediately!
+5. For the full presentation flow with speaker timestamps and roles (M1, M2, M3, M4), see [DEMO_RUNBOOK.md](file:///c:/Users/daivy/Desktop/Hackathons/Minithon/DEMO_RUNBOOK.md).
 
 ---
 
