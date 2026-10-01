@@ -80,7 +80,6 @@ export const Graph = forwardRef<GraphRef, GraphProps>(
         container: containerRef.current,
         boxSelectionEnabled: false,
         autounselectify: false,
-        wheelSensitivity: 0.25,
         minZoom: 0.35,
         maxZoom: 3.5,
         style: [

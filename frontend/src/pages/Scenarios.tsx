@@ -1,16 +1,31 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { useScenario, useAnalysis, useApplyFix, useState_, useSelection } from '../api/hooks'
+import { Link } from 'react-router-dom'
+import { useScenario, useAnalysis, useApplyFix, useState_, useSelection, useSeedDemo } from '../api/hooks'
 import type { ScenarioRequest } from '../api/types'
-import { Card, Button, Chip } from '../components/ui'
+import { Card, Button, Chip, Skeleton } from '../components/ui'
 import { Graph, type GraphRef } from '../components/Graph'
 import { FixCard } from '../components/FixCard'
-import { Radio, ShieldCheck, Play, RotateCcw, ShieldAlert, ArrowRight, ExternalLink } from 'lucide-react'
+import {
+  Radio,
+  ShieldCheck,
+  Play,
+  RotateCcw,
+  ShieldAlert,
+  ArrowRight,
+  ExternalLink,
+  Sparkles,
+} from 'lucide-react'
 
 export const Scenarios: React.FC = () => {
+  useEffect(() => {
+    document.title = 'Attack Scenarios & Blast Radius | Chokepoint Auditor'
+  }, [])
+
   const { data: analysis } = useAnalysis()
   const { data: appState } = useState_()
   const scenarioMutation = useScenario()
   const applyFixMutation = useApplyFix()
+  const seedMutation = useSeedDemo()
   const { openAccountDetail } = useSelection()
   const graphRef = useRef<GraphRef>(null)
 
@@ -196,8 +211,77 @@ export const Scenarios: React.FC = () => {
         </div>
       </div>
 
+      {/* Error Banner with Retry */}
+      {scenarioMutation.isError && (
+        <div className="p-4 bg-red-950/40 border border-red-800 rounded-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-200">Failed to simulate attack scenario</p>
+              <p className="text-xs text-red-400/80">Unable to query /scenario cascade projection data.</p>
+            </div>
+          </div>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              let req: ScenarioRequest
+              if (kind === 'sim_swap') req = { kind: 'entry', target: 'E_SIM' }
+              else if (kind === 'lost_phone') req = { kind: 'entry', target: 'E_PHONE' }
+              else if (kind === 'breach') req = { kind: 'breach', target: targetAccount }
+              else req = { kind: 'compromise', target: targetAccount }
+              scenarioMutation.mutate(req)
+            }}
+          >
+            Retry Simulation
+          </Button>
+        </div>
+      )}
+
+      {/* Empty State when no accounts exist */}
+      {accounts.length === 0 && (
+        <Card>
+          <div className="py-12 px-4 text-center max-w-lg mx-auto">
+            <div className="w-12 h-12 rounded-full bg-cyan-950/80 border border-cyan-800/80 flex items-center justify-center mx-auto text-cyan-400 mb-4 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+              <Radio className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold font-mono-code text-slate-100">
+              No Accounts Available for Simulation
+            </h3>
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              Attack scenario cascades require accounts and identity anchors to simulate SIM swaps, device theft, service breaches, and password compromise cascades.
+            </p>
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => seedMutation.mutate()}
+                disabled={seedMutation.isPending}
+                icon={<Sparkles className="w-4 h-4" />}
+              >
+                {seedMutation.isPending ? 'Seeding Persona...' : 'Load Demo Persona'}
+              </Button>
+              <Link to="/accounts">
+                <Button variant="outline" size="sm">
+                  Add Accounts
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Loading Skeletons */}
+      {scenarioMutation.isPending && (
+        <div className="space-y-4">
+          <Skeleton className="h-32 rounded-lg" />
+          <Skeleton className="h-24 rounded-lg" />
+          <Skeleton className="h-96 rounded-lg" />
+        </div>
+      )}
+
       {/* Scenario Outcome Banner (PRD Diagnostic Format) */}
-      {scenario && (
+      {!scenarioMutation.isPending && scenario && (
         <div className="bg-red-950/25 border border-red-900/60 rounded-lg p-5 shadow-lg space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-1.5 flex-1">

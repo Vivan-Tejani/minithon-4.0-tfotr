@@ -47,7 +47,7 @@ export const Drawer: React.FC<DrawerProps> = ({
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 flex pl-10">
+      <div className="fixed inset-y-0 right-0 flex pl-10" role="dialog" aria-modal="true">
         <div
           className={`w-screen ${widthStyles} bg-[#0a0f1d] border-l border-[#1c2638] shadow-2xl flex flex-col justify-between transform transition-transform ease-out duration-200`}
         >
@@ -63,7 +63,7 @@ export const Drawer: React.FC<DrawerProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md text-slate-400 hover:text-slate-100 hover:bg-[#1a233a] focus:outline-none transition-colors"
+              className="p-1.5 rounded-md text-slate-400 hover:text-slate-100 hover:bg-[#1a233a] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-colors cursor-pointer"
               aria-label="Close drawer"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
