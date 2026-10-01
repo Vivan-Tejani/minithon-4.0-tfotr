@@ -17,6 +17,8 @@ import type {
   Analysis,
   EventItem,
   FixPlan,
+  ReviewItem,
+  ReviewResponse,
   ScenarioRequest,
   Snapshot,
   State,
@@ -28,6 +30,7 @@ let currentMockSnapshots: Snapshot[] = JSON.parse(JSON.stringify(mockSnapshots))
 let currentMockEvents: EventItem[] = JSON.parse(JSON.stringify(mockEvents)) as EventItem[]
 let currentMockAnalysis: Analysis = JSON.parse(JSON.stringify(mockAnalysis)) as Analysis
 let currentMockFixes: FixPlan = JSON.parse(JSON.stringify(mockFixes)) as FixPlan
+let currentMockReview: ReviewResponse = JSON.parse(JSON.stringify(mockReview)) as ReviewResponse
 
 // Local storage key for persistent endpoint toggle overrides
 const STORAGE_KEY = 'chokepoint_endpoint_overrides'
@@ -161,6 +164,10 @@ export function resetMockData(): void {
       label: 'Inventory Reset to Empty',
     },
   ]
+  currentMockReview = {
+    as_of: new Date().toISOString(),
+    items: [],
+  }
 }
 
 const BASE_URL = '/api'
@@ -233,7 +240,39 @@ export const api = {
 
     if (cleanPath === '/review') {
       if (!isUsingMock('review')) return realFetch<T>(path)
-      return mockReview as unknown as T
+
+      const urlParams = new URLSearchParams(path.includes('?') ? path.split('?')[1] : '')
+      const asOf = urlParams.get('as_of')
+      const targetDate = asOf ? new Date(asOf) : new Date()
+
+      let items = [...currentMockReview.items]
+      const lastReview = currentMockState.last_review_at ? new Date(currentMockState.last_review_at) : null
+      const daysSinceReview = lastReview
+        ? (targetDate.getTime() - lastReview.getTime()) / (1000 * 3600 * 24)
+        : 999
+
+      if (daysSinceReview >= 30) {
+        if (!items.some((i) => i.kind === 'periodic_review')) {
+          items.push({
+            id: 'periodic_review:global',
+            kind: 'periodic_review',
+            target: 'system',
+            title: 'Quarterly Digital Footprint Audit Due',
+            detail: `Digital inventory has not undergone a full scheduled security audit in ${Math.round(
+              daysSinceReview
+            )} days.`,
+            severity: 'low',
+            fix_id: null,
+          })
+        }
+      } else {
+        items = items.filter((i) => i.kind !== 'periodic_review')
+      }
+
+      return {
+        as_of: asOf || new Date().toISOString().split('T')[0],
+        items,
+      } as unknown as T
     }
 
     if (cleanPath === '/catalog') {
@@ -258,6 +297,7 @@ export const api = {
       currentMockAnalysis = JSON.parse(JSON.stringify(mockAnalysis)) as Analysis
       currentMockFixes = JSON.parse(JSON.stringify(mockFixes)) as FixPlan
       currentMockSnapshots = JSON.parse(JSON.stringify(mockSnapshots)) as Snapshot[]
+      currentMockReview = JSON.parse(JSON.stringify(mockReview)) as ReviewResponse
       return { ok: true } as unknown as T
     }
 
@@ -451,6 +491,7 @@ export const api = {
         title: `Applied Security Remediation: ${fixId}`,
         detail_json: JSON.stringify({ score_before: before, score_after: after }),
       })
+      currentMockReview.items = currentMockReview.items.filter((item: ReviewItem) => item.fix_id !== fixId)
       return { score_before: before, score_after: after, state_version: 2 } as unknown as T
     }
 
@@ -462,7 +503,8 @@ export const api = {
     if (cleanPath === '/review/complete') {
       if (!isUsingMock('review')) return realFetch<T>(path, { method: 'POST' })
       currentMockState.last_review_at = new Date().toISOString()
-      return { ok: true } as unknown as T
+      currentMockReview.items = currentMockReview.items.filter((item: ReviewItem) => item.kind !== 'periodic_review')
+      return { ok: true, last_review_at: currentMockState.last_review_at } as unknown as T
     }
 
     return realFetch<T>(path, { method: 'POST', body: JSON.stringify(body) })
