@@ -21,6 +21,8 @@ import {
   Layers,
   ChevronRight,
   Zap,
+  Info,
+  ShieldCheck,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -41,14 +43,31 @@ export const Dashboard: React.FC = () => {
   const graphRef = useRef<GraphRef>(null)
 
   const score = analysis?.score ?? 0
-  const scoreColor =
-    score < 40 ? 'text-red-400' : score < 70 ? 'text-amber-400' : 'text-emerald-400'
-  const scoreBg =
+  const el = analysis?.el ?? 0
+  const worst = analysis?.worst ?? 1
+
+  // Posture colors per PRD (< 40 red, 40-69 amber, >= 70 green)
+  const scoreTheme =
     score < 40
-      ? 'border-red-900/60 bg-red-950/20 shadow-[0_0_25px_rgba(239,68,68,0.15)]'
+      ? {
+          text: 'text-red-400',
+          stroke: '#ef4444',
+          bg: 'border-red-900/60 bg-red-950/20 shadow-[0_0_25px_rgba(239,68,68,0.12)]',
+          label: 'ELEVATED EXPOSURE',
+        }
       : score < 70
-      ? 'border-amber-900/60 bg-amber-950/20 shadow-[0_0_25px_rgba(245,158,11,0.15)]'
-      : 'border-emerald-900/60 bg-emerald-950/20 shadow-[0_0_25px_rgba(16,185,129,0.15)]'
+      ? {
+          text: 'text-amber-400',
+          stroke: '#f59e0b',
+          bg: 'border-amber-900/60 bg-amber-950/20 shadow-[0_0_25px_rgba(245,158,11,0.12)]',
+          label: 'MODERATE RISK',
+        }
+      : {
+          text: 'text-emerald-400',
+          stroke: '#10b981',
+          bg: 'border-emerald-900/60 bg-emerald-950/20 shadow-[0_0_25px_rgba(16,185,129,0.12)]',
+          label: 'HARDENED POSTURE',
+        }
 
   const totalAccounts = analysis?.accounts.length ?? 0
   const highRiskAccounts =
@@ -66,40 +85,47 @@ export const Dashboard: React.FC = () => {
   const projectedBestScore =
     best3Fixes.length > 0 ? best3Fixes[best3Fixes.length - 1].score_after : null
 
+  // Radial gauge geometry
+  const radius = 54
+  const circumference = 2 * Math.PI * radius
+  const strokeDashoffset = circumference - (score / 100) * circumference
+
   return (
     <div className="space-y-6">
       {/* Best-3 Remediation Banner */}
       {projectedBestScore && projectedBestScore > score && (
-        <div className="bg-gradient-to-r from-[#0d1c33] via-[#102342] to-[#0c182b] border border-cyan-500/50 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded bg-cyan-500/20 border border-cyan-400/40 text-cyan-300">
+        <div className="bg-gradient-to-r from-[#0a182d] via-[#0f2444] to-[#0c182b] border border-cyan-500/50 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-300">
               <Zap className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-cyan-300">
-                  Counterfactual Recommendation
+                  Counterfactual Takeover Planner (CTP)
                 </span>
                 <span className="text-[10px] font-mono-code bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800 text-cyan-300">
-                  CELF OPTIMIZED
+                  GREEDY CELF
                 </span>
               </div>
-              <p className="text-sm font-semibold text-slate-100 mt-0.5">
-                Apply top 3 fixes to increase posture score from{' '}
-                <span className="font-mono-code text-amber-400">{score}</span> to{' '}
+              <p className="text-sm font-semibold text-slate-100 mt-1">
+                Do these 3 fixes → score{' '}
+                <span className="font-mono-code text-amber-400">{score}</span> →{' '}
                 <span className="font-mono-code text-emerald-400">
                   {projectedBestScore}
                 </span>{' '}
-                (+{projectedBestScore - score} pts)
+                <span className="text-xs font-mono-code text-emerald-400 font-normal">
+                  (+{projectedBestScore - score} pts)
+                </span>
               </p>
             </div>
           </div>
 
           <Link
             to="/fixes"
-            className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-4 py-2 rounded-md text-xs font-mono-code transition-all shadow hover:shadow-[0_0_12px_rgba(6,182,212,0.5)]"
+            className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-4 py-2 rounded-md text-xs font-mono-code transition-all shadow hover:shadow-[0_0_12px_rgba(6,182,212,0.5)] flex-shrink-0"
           >
-            Review Fix Plan <ArrowRight className="w-4 h-4" />
+            Open Fix Checklist <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       )}
@@ -108,118 +134,153 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* Score & Headline Card */}
         <div
-          className={`lg:col-span-4 rounded-lg border p-6 flex flex-col justify-between ${scoreBg}`}
+          className={`lg:col-span-4 rounded-lg border p-6 flex flex-col justify-between ${scoreTheme.bg}`}
         >
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono-code uppercase tracking-wider text-slate-400">
                 Audited Privacy Score
               </span>
-              <span className="text-[11px] font-mono-code text-slate-400">
-                Range 0–100
+              <span className="text-[10px] font-mono-code px-2 py-0.5 rounded border border-slate-700/60 bg-[#070b14] text-slate-300">
+                {scoreTheme.label}
               </span>
             </div>
 
-            {/* Gauge Display */}
-            <div className="my-6 text-center">
-              <div className="relative inline-flex items-baseline justify-center">
-                <span
-                  className={`text-6xl font-black font-mono-code tracking-tighter ${scoreColor}`}
-                >
-                  {isAnalysisLoading ? '--' : score}
-                </span>
-                <span className="text-sm text-slate-500 font-mono-code ml-1">/100</span>
-              </div>
+            {/* Radial SVG Instrument Gauge Display */}
+            <div className="my-5 flex items-center justify-center">
+              <div className="relative flex items-center justify-center">
+                <svg className="w-36 h-36 transform -rotate-90">
+                  {/* Background Track */}
+                  <circle
+                    cx="72"
+                    cy="72"
+                    r={radius}
+                    stroke="#162035"
+                    strokeWidth="10"
+                    fill="transparent"
+                  />
+                  {/* Value Arc */}
+                  <circle
+                    cx="72"
+                    cy="72"
+                    r={radius}
+                    stroke={scoreTheme.stroke}
+                    strokeWidth="10"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    fill="transparent"
+                    className="transition-all duration-700 ease-out"
+                  />
+                </svg>
 
-              <div className="w-full bg-[#111726] h-2.5 rounded-full overflow-hidden mt-4 border border-[#1e2a42]">
-                <div
-                  className={`h-full transition-all duration-500 ${
-                    score < 40
-                      ? 'bg-red-500'
-                      : score < 70
-                      ? 'bg-amber-500'
-                      : 'bg-emerald-500'
-                  }`}
-                  style={{ width: `${Math.min(100, Math.max(5, score))}%` }}
-                />
+                {/* Score Number in Center */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span
+                    className={`text-4xl font-black font-mono-code tracking-tight ${scoreTheme.text}`}
+                  >
+                    {isAnalysisLoading ? '--' : score}
+                  </span>
+                  <span className="text-[10px] font-mono-code text-slate-400 mt-0.5">
+                    / 100
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Headline Diagnostic */}
-            <div className="bg-[#080d18]/80 border border-[#1c2638] rounded-md p-3">
-              <p className="text-xs text-slate-200 leading-relaxed font-mono-code">
-                {isAnalysisLoading ? (
-                  <Skeleton className="h-4 w-full" />
-                ) : (
-                  analysis?.headline
-                )}
-              </p>
+            <div className="bg-[#070c17]/90 border border-[#1c2638] rounded-md p-3">
+              <div className="flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-200 leading-relaxed font-mono-code">
+                  {isAnalysisLoading ? (
+                    <Skeleton className="h-4 w-full" />
+                  ) : (
+                    analysis?.headline
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Required Caveat beneath headline */}
+            <div className="text-[10px] text-slate-400 italic mt-2.5 font-mono-code text-center">
+              Model-based estimate, not a measured probability.
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-[#1c2638]/70 flex items-center justify-between text-[10px] text-slate-400 font-mono-code">
-            <span>Expected Loss (EL): {analysis?.el.toFixed(1)}</span>
-            <span>Worst Case: {analysis?.worst.toFixed(1)}</span>
+          <div className="mt-4 pt-3 border-t border-[#1c2638]/70 flex items-center justify-between text-[11px] text-slate-400 font-mono-code">
+            <span>Expected Loss: <strong className="text-slate-200">{el.toFixed(1)}</strong></span>
+            <span>Worst Case: <strong className="text-slate-200">{worst.toFixed(1)}</strong></span>
           </div>
         </div>
 
         {/* KPI Grid */}
-        <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <Stat
-            label="Total Accounts"
-            value={totalAccounts}
-            subtext="Tracked services & apps"
-            icon={<Layers className="w-4 h-4 text-cyan-400" />}
-          />
-          <Stat
-            label="High-Risk Accounts"
-            value={highRiskAccounts}
-            subtext="Takeover P ≥ 40%"
-            trend={highRiskAccounts > 0 ? 'danger' : 'neutral'}
-            icon={<ShieldAlert className="w-4 h-4 text-red-400" />}
-          />
-          <Stat
-            label="Single Points of Failure"
-            value={spofCount}
-            subtext="Critical root nodes"
-            trend={spofCount > 0 ? 'danger' : 'neutral'}
-            icon={<AlertOctagon className="w-4 h-4 text-amber-400" />}
-          />
-          <Stat
-            label="SIM Swap Reach"
-            value={`${simSwapReachable} accts`}
-            subtext="Reachable via phone intercept"
-            trend="danger"
-            icon={<Smartphone className="w-4 h-4 text-red-400" />}
-          />
+        <div className="lg:col-span-8 flex flex-col justify-between gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <Stat
+              label="Total Accounts"
+              value={totalAccounts}
+              subtext="Monitored digital inventory"
+              icon={<Layers className="w-4 h-4 text-cyan-400" />}
+            />
+            <Stat
+              label="High-Risk Accounts"
+              value={highRiskAccounts}
+              subtext="Takeover P ≥ 40%"
+              trend={highRiskAccounts > 0 ? 'danger' : 'neutral'}
+              icon={<ShieldAlert className="w-4 h-4 text-red-400" />}
+            />
+            <Stat
+              label="Root SPOFs"
+              value={spofCount}
+              subtext="Single points of failure"
+              trend={spofCount > 0 ? 'danger' : 'neutral'}
+              icon={<AlertOctagon className="w-4 h-4 text-amber-400" />}
+            />
+            <Stat
+              label="SIM Swap Blast"
+              value={`${simSwapReachable} accts`}
+              subtext="Vulnerable via carrier code"
+              trend="danger"
+              icon={<Smartphone className="w-4 h-4 text-red-400" />}
+            />
+          </div>
 
           {/* Riskiest Accounts Preview inside the KPI section */}
-          <div className="col-span-2 sm:col-span-2 md:col-span-4 bg-[#0d131f] border border-[#1c2638] rounded-lg p-4">
+          <div className="bg-[#0d131f] border border-[#1c2638] rounded-lg p-4 flex-1 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Top 5 Vulnerable Accounts
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Top 5 Vulnerable Accounts
+                </span>
+                <span className="text-[10px] font-mono-code text-slate-400">
+                  (Ordered by takeover probability desc)
+                </span>
+              </div>
               <Link
                 to="/accounts"
                 className="text-xs font-mono-code text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
               >
-                View All {totalAccounts} <ChevronRight className="w-3.5 h-3.5" />
+                All Accounts ({totalAccounts}) <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
-              {riskiestTop5.map((acct) => (
+              {riskiestTop5.map((acct, idx) => (
                 <div
                   key={acct.id}
                   onClick={() => openAccountDetail(acct.id)}
-                  className="bg-[#080d18] hover:bg-[#111728] border border-[#1c2638] hover:border-cyan-800/80 p-2.5 rounded cursor-pointer transition-colors"
+                  className="bg-[#080d18] hover:bg-[#111728] border border-[#1c2638] hover:border-cyan-800/80 p-2.5 rounded cursor-pointer transition-all duration-150 group"
                 >
-                  <p className="text-xs font-bold text-slate-100 truncate">{acct.name}</p>
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center justify-between text-[10px] font-mono-code text-slate-500 mb-1">
+                    <span>#{idx + 1}</span>
+                    <span>Imp {acct.impact}</span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-100 truncate group-hover:text-cyan-300 transition-colors">
+                    {acct.name}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between">
                     <BandBadge band={acct.band} probability={acct.p} size="sm" />
-                    <span className="text-[10px] font-mono-code text-slate-400">
-                      Imp {acct.impact}
-                    </span>
                   </div>
                 </div>
               ))}
@@ -255,7 +316,7 @@ export const Dashboard: React.FC = () => {
             height={480}
           />
         ) : (
-          <div className="h-64 flex items-center justify-center text-slate-500 font-mono-code">
+          <div className="h-64 flex items-center justify-center text-slate-500 font-mono-code text-xs">
             No graph nodes generated.
           </div>
         )}
@@ -309,7 +370,7 @@ export const Dashboard: React.FC = () => {
         subtitle="Snapshot history recorded across security audits, fix applications, and inventory changes"
         action={<TrendingUp className="w-4 h-4 text-emerald-400" />}
       >
-        {snapshots && snapshots.length > 0 ? (
+        {snapshots && snapshots.length > 1 ? (
           <div className="h-64 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={snapshots}>
@@ -362,8 +423,12 @@ export const Dashboard: React.FC = () => {
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="h-40 flex items-center justify-center text-slate-500 font-mono-code text-xs">
-            Apply a fix or seed persona to view posture trend telemetry.
+          <div className="h-40 flex flex-col items-center justify-center text-slate-500 font-mono-code text-xs space-y-1">
+            <ShieldCheck className="w-8 h-8 text-slate-600 mb-1" />
+            <p>Apply a fix to see your trend</p>
+            <p className="text-[10px] text-slate-600">
+              Each security remediation and account edit records a dated historical snapshot.
+            </p>
           </div>
         )}
       </Card>
