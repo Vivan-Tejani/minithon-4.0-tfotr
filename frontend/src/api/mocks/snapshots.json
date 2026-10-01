@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "ts": "2026-09-01T10:00:00Z",
+    "score": 32,
+    "el": 22.4,
+    "label": "Initial Footprint Audit"
+  },
+  {
+    "id": 2,
+    "ts": "2026-09-08T14:30:00Z",
+    "score": 35,
+    "el": 20.8,
+    "label": "Audited Device Biometric Lock"
+  },
+  {
+    "id": 3,
+    "ts": "2026-09-15T09:15:00Z",
+    "score": 38,
+    "el": 19.9,
+    "label": "Added 2FA to Bank Portal"
+  },
+  {
+    "id": 4,
+    "ts": "2026-09-22T16:45:00Z",
+    "score": 41,
+    "el": 18.3,
+    "label": "Revoked Inactive OAuth Tokens"
+  },
+  {
+    "id": 5,
+    "ts": "2026-09-28T11:20:00Z",
+    "score": 41,
+    "el": 18.3,
+    "label": "Current Persona Baseline"
+  },
+  {
+    "id": 6,
+    "ts": "2026-10-01T09:00:00Z",
+    "score": 41,
+    "el": 18.3,
+    "label": "Pre-Fix Auditor State"
+  }
+]
