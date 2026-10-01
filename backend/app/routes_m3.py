@@ -188,31 +188,75 @@ def apply_fix_endpoint(fix_id: str = Path(...)) -> dict[str, Any]:
     clear_planner_cache()
 
     # Record snapshot & event
-    snap = add_snapshot(score=score_after, el=ev_after["el"], label=f"Applied: {title}")
-    add_event(
-        kind="fix_applied",
-        title=f"Applied: {title}",
-        detail={
-            "fix_id": fix_id,
-            "score_before": score_before,
-            "score_after": score_after,
-        },
-    )
+    snap_id = 1
+    try:
+        from app import store
+        snap_id = store.add_snapshot(score=score_after, el=ev_after["el"], label=f"Applied: {title}")
+        store.add_event(
+            kind="fix_applied",
+            title=f"Applied: {title}",
+            detail={
+                "fix_id": fix_id,
+                "score_before": score_before,
+                "score_after": score_after,
+            },
+        )
+    except Exception:
+        try:
+            from backend.app import store
+            snap_id = store.add_snapshot(score=score_after, el=ev_after["el"], label=f"Applied: {title}")
+            store.add_event(
+                kind="fix_applied",
+                title=f"Applied: {title}",
+                detail={
+                    "fix_id": fix_id,
+                    "score_before": score_before,
+                    "score_after": score_after,
+                },
+            )
+        except Exception:
+            snap = add_snapshot(score=score_after, el=ev_after["el"], label=f"Applied: {title}")
+            snap_id = snap["id"]
+            add_event(
+                kind="fix_applied",
+                title=f"Applied: {title}",
+                detail={
+                    "fix_id": fix_id,
+                    "score_before": score_before,
+                    "score_after": score_after,
+                },
+            )
 
     return {
         "score_before": score_before,
         "score_after": score_after,
-        "state_version": snap["id"],
+        "state_version": snap_id,
     }
 
 
 @router.get("/snapshots")
 def get_snapshots_list() -> list[dict[str, Any]]:
     """Retrieve ordered timeline of score snapshots."""
-    return get_snapshots()
+    try:
+        from app import store
+        return store.get_snapshots()
+    except Exception:
+        try:
+            from backend.app import store
+            return store.get_snapshots()
+        except Exception:
+            return get_snapshots()
 
 
 @router.get("/events")
 def get_events_list(limit: int = Query(default=50, ge=1, le=100)) -> list[dict[str, Any]]:
     """Retrieve latest events log."""
-    return get_events(limit=limit)
+    try:
+        from app import store
+        return store.get_events(limit=limit)
+    except Exception:
+        try:
+            from backend.app import store
+            return store.get_events(limit=limit)
+        except Exception:
+            return get_events(limit=limit)
