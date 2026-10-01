@@ -260,7 +260,11 @@ export const Accounts: React.FC = () => {
                       <button
                         onClick={() => {
                           if (confirm(`Delete account ${acct.name}?`)) {
-                            deleteAccountMutation.mutate(acct.id)
+                            deleteAccountMutation.mutate(acct.id, {
+                              onError: (err: any) => {
+                                alert(err?.message || `Cannot delete ${acct.name}: other accounts depend on it.`)
+                              },
+                            })
                           }
                         }}
                         className="p-1 hover:text-red-400 text-slate-400 rounded transition-colors"

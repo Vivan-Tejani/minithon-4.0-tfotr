@@ -21,15 +21,16 @@ def get_db_path() -> Path:
 
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
     target = db_path or get_db_path()
-    conn = sqlite3.connect(str(target))
+    conn = sqlite3.connect(str(target), timeout=30.0)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db(db_path: Optional[Path] = None) -> None:
-    """Create tables if they do not exist."""
+    """Create tables if they do not exist and enable WAL mode."""
     conn = get_connection(db_path)
     with conn:
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS kv (
                 key TEXT PRIMARY KEY,

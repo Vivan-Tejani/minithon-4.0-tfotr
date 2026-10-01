@@ -3,8 +3,16 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Ensure both backend directory and repo root are in sys.path
+_backend_dir = Path(__file__).resolve().parent.parent
+_repo_root = _backend_dir.parent
+for _p in (str(_backend_dir), str(_repo_root)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 from fastapi import FastAPI, APIRouter, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -330,8 +338,6 @@ def run_scenario(payload: ScenarioPayload):
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-
-
 app.include_router(api_router)
 
 try:
