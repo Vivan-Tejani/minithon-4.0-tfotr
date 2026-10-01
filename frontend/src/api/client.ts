@@ -1,6 +1,7 @@
 /**
  * Chokepoint API Client
  * Supports mock simulation and seamless per-endpoint real API flipping.
+ * Strictly adheres to PRD §5 & §7 endpoints.
  */
 
 import mockState from './mocks/state.json'
@@ -21,9 +22,6 @@ import type {
   State,
 } from './types'
 
-// Global mock master toggle (defaults to true if unset)
-const envUseMock = import.meta.env.VITE_USE_MOCK !== 'false'
-
 // In-memory clone for stateful mock mutations
 let currentMockState: State = JSON.parse(JSON.stringify(mockState)) as State
 let currentMockSnapshots: Snapshot[] = JSON.parse(JSON.stringify(mockSnapshots)) as Snapshot[]
@@ -31,28 +29,138 @@ let currentMockEvents: EventItem[] = JSON.parse(JSON.stringify(mockEvents)) as E
 let currentMockAnalysis: Analysis = JSON.parse(JSON.stringify(mockAnalysis)) as Analysis
 let currentMockFixes: FixPlan = JSON.parse(JSON.stringify(mockFixes)) as FixPlan
 
-// Per-endpoint override map: true = force real, false = keep default mock
-export const endpointOverrides: Record<string, boolean> = {
-  health: false,
-  state: false,
-  anchors: false,
-  accounts: false,
-  catalog: false,
-  seed: false,
-  analysis: false,
-  paths: false,
-  fixes: false,
-  preview: false,
-  scenario: false,
-  review: false,
-  events: false,
-  snapshots: false,
-  settings: false,
+// Local storage key for persistent endpoint toggle overrides
+const STORAGE_KEY = 'chokepoint_endpoint_overrides'
+const MASTER_MOCK_KEY = 'chokepoint_use_mock_master'
+
+function loadStoredOverrides(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // fallback
+  }
+  return {
+    health: false,
+    state: false,
+    anchors: false,
+    accounts: false,
+    catalog: false,
+    seed: false,
+    analysis: false,
+    paths: false,
+    fixes: false,
+    preview: false,
+    scenario: false,
+    review: false,
+    events: false,
+    snapshots: false,
+    settings: false,
+  }
+}
+
+export const endpointOverrides: Record<string, boolean> = loadStoredOverrides()
+
+export function getEndpointOverrides(): Record<string, boolean> {
+  return { ...endpointOverrides }
+}
+
+type OverrideChangeListener = () => void
+const overrideListeners = new Set<OverrideChangeListener>()
+
+export function onOverridesChange(fn: OverrideChangeListener): () => void {
+  overrideListeners.add(fn)
+  return () => overrideListeners.delete(fn)
+}
+
+function notifyListeners() {
+  overrideListeners.forEach((fn) => {
+    try {
+      fn()
+    } catch {
+      // ignore
+    }
+  })
+}
+
+export function setEndpointOverride(endpointKey: string, forceReal: boolean): void {
+  endpointOverrides[endpointKey] = forceReal
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(endpointOverrides))
+  } catch {
+    // ignore
+  }
+  notifyListeners()
 }
 
 export function isUsingMock(endpointKey: string): boolean {
+  try {
+    const master = localStorage.getItem(MASTER_MOCK_KEY)
+    if (master !== null) {
+      if (master === 'false') return false
+      if (endpointOverrides[endpointKey]) return false
+      return true
+    }
+  } catch {
+    // fallback
+  }
+
   if (endpointOverrides[endpointKey]) return false
-  return envUseMock
+  return import.meta.env.VITE_USE_MOCK !== 'false'
+}
+
+export function isMasterMockEnabled(): boolean {
+  try {
+    const master = localStorage.getItem(MASTER_MOCK_KEY)
+    if (master !== null) return master === 'true'
+  } catch {
+    // fallback
+  }
+  return import.meta.env.VITE_USE_MOCK !== 'false'
+}
+
+export function setMasterMock(useMock: boolean): void {
+  try {
+    localStorage.setItem(MASTER_MOCK_KEY, String(useMock))
+  } catch {
+    // ignore
+  }
+  notifyListeners()
+}
+
+export function resetMockData(): void {
+  currentMockState = {
+    anchors: { phone: { sim_lock: false, device_lock: true } },
+    accounts: [],
+    settings: JSON.parse(JSON.stringify(mockState.settings)),
+    last_review_at: null,
+    now: new Date().toISOString(),
+  }
+  currentMockAnalysis = {
+    score: 100,
+    el: 0,
+    worst: 10,
+    headline: 'No accounts registered. Add accounts to evaluate attack paths.',
+    accounts: [],
+    spofs: [],
+    crown_path: null,
+    graph: { nodes: [], edges: [] },
+  }
+  currentMockFixes = {
+    base_score: 100,
+    best3: [],
+    quick_wins: [],
+    plan: [],
+  }
+  currentMockSnapshots = [
+    {
+      id: 1,
+      ts: new Date().toISOString(),
+      score: 100,
+      el: 0,
+      label: 'Inventory Reset to Empty',
+    },
+  ]
 }
 
 const BASE_URL = '/api'
@@ -149,6 +257,13 @@ export const api = {
       currentMockState = JSON.parse(JSON.stringify(mockState)) as State
       currentMockAnalysis = JSON.parse(JSON.stringify(mockAnalysis)) as Analysis
       currentMockFixes = JSON.parse(JSON.stringify(mockFixes)) as FixPlan
+      currentMockSnapshots = JSON.parse(JSON.stringify(mockSnapshots)) as Snapshot[]
+      return { ok: true } as unknown as T
+    }
+
+    if (cleanPath === '/reset') {
+      if (!isUsingMock('seed')) return realFetch<T>(path, { method: 'POST', body: JSON.stringify(body) })
+      resetMockData()
       return { ok: true } as unknown as T
     }
 
@@ -160,13 +275,160 @@ export const api = {
     if (cleanPath === '/scenario') {
       if (!isUsingMock('scenario')) return realFetch<T>(path, { method: 'POST', body: JSON.stringify(body) })
       const req = body as ScenarioRequest
-      if (req?.target === 'E_SIM' || req?.kind === 'entry') {
+
+      if (req?.target === 'E_SIM' || (req?.kind === 'entry' && req?.target === 'E_SIM')) {
         return mockScenarioSimSwap as unknown as T
       }
-      return {
-        ...mockScenarioSimSwap,
-        scenario: { kind: req.kind, target: req.target, label: `Simulated Attack: ${req.target}` },
-      } as unknown as T
+
+      if (req?.kind === 'entry' && req?.target === 'E_PHONE') {
+        const deviceLockActive = currentMockState.anchors.phone.device_lock
+        if (deviceLockActive) {
+          return {
+            scenario: {
+              kind: 'entry',
+              target: 'E_PHONE',
+              label: 'Lost / Stolen Phone (Device Lock Active)',
+            },
+            cascade: [],
+            falls: 0,
+            el_delta: 0,
+            score_during: currentMockAnalysis.score,
+            leaked_group: null,
+            next_actions: [],
+          } as unknown as T
+        } else {
+          return {
+            scenario: {
+              kind: 'entry',
+              target: 'E_PHONE',
+              label: 'Lost / Stolen Phone (Unlocked Device)',
+            },
+            cascade: [
+              {
+                round: 1,
+                accounts: [
+                  { id: 'upi', via: 'Direct biometric/passcode bypass' },
+                  { id: 'gmail', via: 'Active cached session on device' },
+                ],
+              },
+            ],
+            falls: 2,
+            el_delta: 6.8,
+            score_during: 18,
+            leaked_group: null,
+            next_actions: [
+              {
+                id: 'device_lock',
+                type: 'device_lock',
+                title: 'Enable strong device lock PIN / biometric encryption',
+                target: 'phone',
+                effort: 'low',
+                standalone_gain: 6.8,
+                marginal_gain: 6.8,
+                score_after: currentMockAnalysis.score + 15,
+                rank: 1,
+                in_best3: true,
+                note: 'Locks stolen device instantly.',
+                why: 'Prevents direct physical access from extracting cached session keys.',
+              },
+            ],
+          } as unknown as T
+        }
+      }
+
+      if (req?.kind === 'breach') {
+        const targetAcct = currentMockState.accounts.find((a) => a.id === req.target)
+        const pwGroup = targetAcct?.password_group
+        const matchingGroupAccounts = pwGroup
+          ? currentMockState.accounts.filter((a) => a.password_group === pwGroup && a.id !== req.target)
+          : []
+
+        const round1 = [{ id: req.target, via: 'Initial credential breach / leaked hash' }]
+        const round2 = matchingGroupAccounts.map((a) => ({
+          id: a.id,
+          via: `Credential stuffing via reused password group '${pwGroup}'`,
+        }))
+
+        const totalFalls = round1.length + round2.length
+        return {
+          scenario: {
+            kind: 'breach',
+            target: req.target,
+            label: `Service Credential Leak (${targetAcct?.name || req.target})`,
+          },
+          cascade: round2.length > 0 ? [{ round: 1, accounts: round1 }, { round: 2, accounts: round2 }] : [{ round: 1, accounts: round1 }],
+          falls: totalFalls,
+          el_delta: Math.round(totalFalls * 1.4 * 10) / 10,
+          score_during: Math.max(8, currentMockAnalysis.score - totalFalls * 7),
+          leaked_group: pwGroup || null,
+          next_actions: pwGroup
+            ? [
+                {
+                  id: `unique_pw:${pwGroup}`,
+                  type: 'unique_pw',
+                  title: `Assign unique passwords to accounts in Group '${pwGroup}'`,
+                  target: pwGroup,
+                  effort: 'medium',
+                  standalone_gain: 4.8,
+                  marginal_gain: 4.8,
+                  score_after: currentMockAnalysis.score + 14,
+                  rank: 1,
+                  in_best3: true,
+                  note: 'Isolates password reuse breach cascade.',
+                  why: 'Ensures a breach at one service cannot unlock any other accounts.',
+                },
+              ]
+            : [],
+        } as unknown as T
+      }
+
+      if (req?.kind === 'compromise') {
+        const targetAcct = currentMockState.accounts.find((a) => a.id === req.target)
+        // Find accounts that use this account as SSO or recovery
+        const dependents = currentMockState.accounts.filter(
+          (a) =>
+            a.id !== req.target &&
+            (a.login_methods?.some((m) => m.includes(req.target)) || a.recovery?.some((r) => r.includes(req.target)))
+        )
+
+        const round1 = [{ id: req.target, via: 'Direct account takeover / session hijack' }]
+        const round2 = dependents.map((a) => ({
+          id: a.id,
+          via: `Identity federation & password recovery via ${targetAcct?.name || req.target}`,
+        }))
+
+        const totalFalls = round1.length + round2.length
+        return {
+          scenario: {
+            kind: 'compromise',
+            target: req.target,
+            label: `Direct Hijack of ${targetAcct?.name || req.target}`,
+          },
+          cascade: round2.length > 0 ? [{ round: 1, accounts: round1 }, { round: 2, accounts: round2 }] : [{ round: 1, accounts: round1 }],
+          falls: totalFalls,
+          el_delta: Math.round(totalFalls * 1.5 * 10) / 10,
+          score_during: Math.max(5, currentMockAnalysis.score - totalFalls * 8),
+          leaked_group: null,
+          next_actions: [
+            {
+              id: `2fa:${req.target}`,
+              type: '2fa',
+              title: `Enforce hardware or app authenticator 2FA on ${targetAcct?.name || req.target}`,
+              target: req.target,
+              effort: 'low',
+              standalone_gain: 3.5,
+              marginal_gain: 3.5,
+              score_after: currentMockAnalysis.score + 12,
+              rank: 1,
+              in_best3: true,
+              note: 'Blocks unauthorized takeover at source.',
+              why: 'Multi-factor authentication invalidates stolen credentials.',
+            },
+          ],
+        } as unknown as T
+      }
+
+      return mockScenarioSimSwap as unknown as T
     }
 
     if (cleanPath.startsWith('/fixes/') && cleanPath.endsWith('/apply')) {

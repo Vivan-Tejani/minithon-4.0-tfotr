@@ -15,6 +15,33 @@ interface ToastContextType {
   removeToast: (id: string) => void
 }
 
+type ToastListener = (title: string, message?: string, type?: ToastType) => void
+const toastListeners = new Set<ToastListener>()
+
+export const globalToast = {
+  show: (title: string, message?: string, type: ToastType = 'info') => {
+    toastListeners.forEach((fn) => {
+      try {
+        fn(title, message, type)
+      } catch {
+        // ignore
+      }
+    })
+  },
+  success: (title: string, message?: string) => {
+    globalToast.show(title, message, 'success')
+  },
+  error: (title: string, message?: string) => {
+    globalToast.show(title, message, 'error')
+  },
+  warning: (title: string, message?: string) => {
+    globalToast.show(title, message, 'warning')
+  },
+  info: (title: string, message?: string) => {
+    globalToast.show(title, message, 'info')
+  },
+}
+
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -35,6 +62,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
     [removeToast]
   )
+
+  React.useEffect(() => {
+    const listener: ToastListener = (title, message, type) => {
+      showToast(title, message, type)
+    }
+    toastListeners.add(listener)
+    return () => {
+      toastListeners.delete(listener)
+    }
+  }, [showToast])
 
   return (
     <ToastContext.Provider value={{ toasts, showToast, removeToast }}>

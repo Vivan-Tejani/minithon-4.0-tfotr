@@ -109,6 +109,39 @@ export function useSeedDemo() {
       queryClient.invalidateQueries({ queryKey: ['snapshots'] })
       queryClient.invalidateQueries({ queryKey: ['events'] })
       queryClient.invalidateQueries({ queryKey: ['review'] })
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+    },
+  })
+}
+
+export function useResetState() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<{ ok: boolean }>('/reset'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['state'] })
+      queryClient.invalidateQueries({ queryKey: ['analysis'] })
+      queryClient.invalidateQueries({ queryKey: ['fixes'] })
+      queryClient.invalidateQueries({ queryKey: ['snapshots'] })
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+      queryClient.invalidateQueries({ queryKey: ['review'] })
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+    },
+  })
+}
+
+export function useUpdateSettings() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (settings: Settings) => api.put<Settings>('/settings', settings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+      queryClient.invalidateQueries({ queryKey: ['state'] })
+      queryClient.invalidateQueries({ queryKey: ['analysis'] })
+      queryClient.invalidateQueries({ queryKey: ['fixes'] })
+      queryClient.invalidateQueries({ queryKey: ['snapshots'] })
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+      queryClient.invalidateQueries({ queryKey: ['review'] })
     },
   })
 }
@@ -122,6 +155,8 @@ export function useUpdateAnchors() {
       queryClient.invalidateQueries({ queryKey: ['analysis'] })
       queryClient.invalidateQueries({ queryKey: ['fixes'] })
       queryClient.invalidateQueries({ queryKey: ['snapshots'] })
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+      queryClient.invalidateQueries({ queryKey: ['review'] })
     },
   })
 }
@@ -196,6 +231,9 @@ export function useCompleteReview() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['review'] })
       queryClient.invalidateQueries({ queryKey: ['state'] })
+      queryClient.invalidateQueries({ queryKey: ['analysis'] })
+      queryClient.invalidateQueries({ queryKey: ['fixes'] })
+      queryClient.invalidateQueries({ queryKey: ['snapshots'] })
       queryClient.invalidateQueries({ queryKey: ['events'] })
     },
   })

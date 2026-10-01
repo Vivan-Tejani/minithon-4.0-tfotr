@@ -308,6 +308,23 @@ def seed_demo():
     return {"ok": True}
 
 
+@api_router.post("/reset")
+def reset_demo():
+    store.reset()
+    empty_state = State(
+        anchors=Anchors(),
+        accounts=[],
+        settings=Settings(),
+        last_review_at=None,
+        now="2026-03-31T09:00:00Z",
+    )
+    store.save_state(empty_state)
+    service.clear_cache()
+    service.record_snapshot_with_metrics(label="Reset inventory to empty", state=empty_state)
+    store.add_event(kind="reset", title="Inventory reset to empty", detail={})
+    return {"ok": True}
+
+
 # P1: Import / Export (Ticket M1-08)
 @api_router.get("/export")
 def export_state():

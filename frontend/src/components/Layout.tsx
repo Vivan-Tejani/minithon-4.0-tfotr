@@ -1,26 +1,56 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { Bell, RefreshCw, Database, Shield, Radio, Activity, AlertCircle } from 'lucide-react'
-import { useReview, useSeedDemo } from '../api/hooks'
+import {
+  Bell,
+  Sparkles,
+  RotateCcw,
+  Database,
+  Shield,
+  Radio,
+  Activity,
+  AlertCircle,
+  Sliders,
+} from 'lucide-react'
+import { useReview, useSeedDemo, useResetState } from '../api/hooks'
+import { isMasterMockEnabled, onOverridesChange } from '../api/client'
 import { AlertsPanel } from './AlertsPanel'
 import { AccountDetail } from './AccountDetail'
+import { EndpointDrawer } from './EndpointDrawer'
 import { useToast } from './ui'
 
 export const Layout: React.FC = () => {
   const [isAlertsOpen, setIsAlertsOpen] = useState(false)
+  const [isEndpointsOpen, setIsEndpointsOpen] = useState(false)
+  const [isUsingMock, setIsUsingMock] = useState(isMasterMockEnabled())
+
   const { data: reviewData } = useReview()
   const seedMutation = useSeedDemo()
+  const resetMutation = useResetState()
   const { showToast } = useToast()
 
+  useEffect(() => {
+    return onOverridesChange(() => {
+      setIsUsingMock(isMasterMockEnabled())
+    })
+  }, [])
+
   const alertCount = reviewData?.items?.length ?? 0
-  const isUsingMock = import.meta.env.VITE_USE_MOCK !== 'false'
 
   const handleSeedDemo = async () => {
     try {
       await seedMutation.mutateAsync()
       showToast('Persona Loaded', 'Demo persona (12 accounts, anchors) seeded successfully', 'success')
     } catch (e: any) {
-      showToast('Error', e.message, 'error')
+      showToast('Error', e?.message || 'Failed to seed demo persona', 'error')
+    }
+  }
+
+  const handleReset = async () => {
+    try {
+      await resetMutation.mutateAsync()
+      showToast('Inventory Reset', 'Cleared all accounts and reset to default empty state', 'warning')
+    } catch (e: any) {
+      showToast('Error', e?.message || 'Failed to reset inventory', 'error')
     }
   }
 
@@ -73,29 +103,49 @@ export const Layout: React.FC = () => {
             </nav>
           </div>
 
-          {/* Right Tools & Alert Bell */}
-          <div className="flex items-center gap-3">
-            {/* Mock / Live State Pill */}
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono-code border bg-[#0d131f] border-[#1c2638] text-slate-400">
+          {/* Right Tools & Controls */}
+          <div className="flex items-center gap-2.5">
+            {/* Mock / Live State Switcher Pill */}
+            <button
+              onClick={() => setIsEndpointsOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-mono-code border bg-[#0d131f] hover:bg-[#131b2e] border-[#1c2638] hover:border-cyan-800/80 text-slate-300 transition-all cursor-pointer"
+              title="Configure per-endpoint live/mock routing"
+            >
               <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isUsingMock ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'
+                className={`w-2 h-2 rounded-full ${
+                  isUsingMock ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]' : 'bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]'
                 }`}
               />
-              <span>{isUsingMock ? 'MODE: MOCK SIM' : 'MODE: LIVE API'}</span>
-            </div>
+              <span className="hidden sm:inline font-semibold">
+                {isUsingMock ? 'MODE: MOCK SIM' : 'MODE: LIVE API'}
+              </span>
+              <Sliders className="w-3 h-3 text-slate-400 ml-0.5" />
+            </button>
 
-            {/* Load Demo Persona CTA */}
+            {/* Load Demo Persona Button */}
             <button
               onClick={handleSeedDemo}
               disabled={seedMutation.isPending}
-              className="inline-flex items-center gap-1.5 text-xs font-mono-code bg-[#121a2c] hover:bg-[#1a253e] text-slate-300 hover:text-cyan-300 px-2.5 py-1.5 rounded border border-[#222e47] transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-mono-code bg-[#121a2c] hover:bg-[#1a253e] text-slate-300 hover:text-cyan-300 px-2.5 py-1.5 rounded border border-[#222e47] transition-all cursor-pointer disabled:opacity-50"
               title="Load standard PRD §9 persona dataset"
             >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${seedMutation.isPending ? 'animate-spin' : ''}`}
+              <Sparkles
+                className={`w-3.5 h-3.5 text-cyan-400 ${seedMutation.isPending ? 'animate-spin' : ''}`}
               />
-              <span className="hidden sm:inline">Reset / Load Persona</span>
+              <span className="hidden xl:inline">Load Persona</span>
+            </button>
+
+            {/* Reset Button */}
+            <button
+              onClick={handleReset}
+              disabled={resetMutation.isPending}
+              className="inline-flex items-center gap-1.5 text-xs font-mono-code bg-[#16121f] hover:bg-[#231a30] text-slate-400 hover:text-red-300 px-2.5 py-1.5 rounded border border-[#2d2238] transition-all cursor-pointer disabled:opacity-50"
+              title="Reset inventory to empty state"
+            >
+              <RotateCcw
+                className={`w-3.5 h-3.5 text-red-400 ${resetMutation.isPending ? 'animate-spin' : ''}`}
+              />
+              <span className="hidden xl:inline">Reset</span>
             </button>
 
             {/* Alerts Bell */}
@@ -115,20 +165,40 @@ export const Layout: React.FC = () => {
         </div>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden flex items-center gap-1 py-2 border-t border-[#1c2638] overflow-x-auto text-[11px] font-mono-code">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                `px-2.5 py-1 rounded whitespace-nowrap ${
-                  isActive ? 'bg-[#152037] text-cyan-300' : 'text-slate-400'
-                }`
-              }
+        <div className="md:hidden flex items-center justify-between py-2 border-t border-[#1c2638] overflow-x-auto text-[11px] font-mono-code gap-1">
+          <div className="flex items-center gap-1">
+            {navLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  `px-2 py-1 rounded whitespace-nowrap ${
+                    isActive ? 'bg-[#152037] text-cyan-300' : 'text-slate-400'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleSeedDemo}
+              disabled={seedMutation.isPending}
+              className="p-1 rounded bg-[#121a2c] text-cyan-400"
+              title="Load Demo Persona"
             >
-              {link.label}
-            </NavLink>
-          ))}
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleReset}
+              disabled={resetMutation.isPending}
+              className="p-1 rounded bg-[#16121f] text-red-400"
+              title="Reset State"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -151,6 +221,9 @@ export const Layout: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Endpoint Routing Matrix Drawer */}
+      <EndpointDrawer isOpen={isEndpointsOpen} onClose={() => setIsEndpointsOpen(false)} />
 
       {/* Global Alerts Drawer */}
       <AlertsPanel isOpen={isAlertsOpen} onClose={() => setIsAlertsOpen(false)} />
