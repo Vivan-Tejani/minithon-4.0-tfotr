@@ -1,19 +1,50 @@
-import React, { useState, useMemo } from 'react'
-import { useState_, useAnalysis, useUpdateAnchors, useUpsertAccount, useDeleteAccount, useSelection } from '../api/hooks'
-import { Card, Button, Chip, BandBadge, Drawer } from '../components/ui'
+import React, { useState, useMemo, useEffect } from 'react'
+import {
+  useState_,
+  useAnalysis,
+  useUpdateAnchors,
+  useUpsertAccount,
+  useDeleteAccount,
+  useSelection,
+  useSeedDemo,
+} from '../api/hooks'
+import { Card, Button, Chip, BandBadge, Drawer, Skeleton } from '../components/ui'
 import { FiltersBar, type FiltersState } from '../components/FiltersBar'
 import { AccountForm } from '../components/AccountForm'
 import type { Account } from '../api/types'
-import { Plus, Smartphone, Trash2, Edit3, ShieldAlert } from 'lucide-react'
+import {
+  Plus,
+  Smartphone,
+  Trash2,
+  Edit3,
+  ShieldAlert,
+  AlertCircle,
+  Sparkles,
+  RotateCcw,
+} from 'lucide-react'
 
 export const Accounts: React.FC = () => {
-  const { data: appState } = useState_()
-  const { data: analysis } = useAnalysis()
+  useEffect(() => {
+    document.title = 'Accounts & Inventory | Chokepoint Auditor'
+  }, [])
+
+  const {
+    data: appState,
+    isLoading: isStateLoading,
+    isError: isStateError,
+    refetch: refetchState,
+  } = useState_()
+  const {
+    data: analysis,
+    isError: isAnalysisError,
+    refetch: refetchAnalysis,
+  } = useAnalysis()
   const { openAccountDetail } = useSelection()
 
   const updateAnchorsMutation = useUpdateAnchors()
   const upsertAccountMutation = useUpsertAccount()
   const deleteAccountMutation = useDeleteAccount()
+  const seedMutation = useSeedDemo()
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
@@ -93,65 +124,134 @@ export const Accounts: React.FC = () => {
         </Button>
       </div>
 
+      {/* Error Banner with Retry */}
+      {(isStateError || isAnalysisError) && (
+        <div className="p-4 bg-red-950/40 border border-red-800 rounded-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-200">Failed to load account inventory</p>
+              <p className="text-xs text-red-400/80">Unable to query /state or /analysis telemetry from the backend.</p>
+            </div>
+          </div>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              refetchState()
+              refetchAnalysis()
+            }}
+          >
+            Retry Telemetry
+          </Button>
+        </div>
+      )}
+
+      {/* Zero Accounts Empty State */}
+      {!isStateLoading && accounts.length === 0 && (
+        <Card>
+          <div className="py-10 px-4 text-center max-w-lg mx-auto">
+            <div className="w-12 h-12 rounded-full bg-cyan-950/80 border border-cyan-800/80 flex items-center justify-center mx-auto text-cyan-400 mb-4 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold font-mono-code text-slate-100">
+              No Accounts Registered in Inventory
+            </h3>
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              Your security auditor has no registered services yet. Load the canonical 12-account cybersecurity persona to immediately evaluate credential reuse cascades, or register your first service.
+            </p>
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => seedMutation.mutate()}
+                disabled={seedMutation.isPending}
+                icon={<Sparkles className="w-4 h-4" />}
+              >
+                {seedMutation.isPending ? 'Seeding Persona...' : 'Load Demo Persona'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditingAccount(null)
+                  setIsFormOpen(true)
+                }}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                Add First Account
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Hardware & Anchor Baseline Card */}
       <Card
         title="Hardware & Identity Anchors"
         subtitle="Foundational device and SIM carrier barriers affecting all downstream gates"
         action={<Smartphone className="w-4 h-4 text-cyan-400" />}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-3.5 bg-[#0a0f1d] border border-[#1c2638] rounded-lg flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-200">Carrier SIM Lock / Port-Out PIN</span>
-                {anchors.phone.sim_lock ? (
-                  <Chip variant="success" size="xs">ENABLED</Chip>
-                ) : (
-                  <Chip variant="danger" size="xs">VULNERABLE</Chip>
-                )}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Multiplies SIM swap takeover probability by 0.25× across all SMS gates.
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={anchors.phone.sim_lock}
-              onChange={(e) => {
-                updateAnchorsMutation.mutate({
-                  phone: { ...anchors.phone, sim_lock: e.target.checked },
-                })
-              }}
-              className="h-4 w-4 rounded bg-[#070b14] border-[#1c2638] text-cyan-500 cursor-pointer"
-            />
+        {isStateLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-3.5 bg-[#0a0f1d] border border-[#1c2638] rounded-lg flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-200">Carrier SIM Lock / Port-Out PIN</span>
+                  {anchors.phone.sim_lock ? (
+                    <Chip variant="success" size="xs">ENABLED</Chip>
+                  ) : (
+                    <Chip variant="danger" size="xs">VULNERABLE</Chip>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Multiplies SIM swap takeover probability by 0.25× across all SMS gates.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={anchors.phone.sim_lock}
+                onChange={(e) => {
+                  updateAnchorsMutation.mutate({
+                    phone: { ...anchors.phone, sim_lock: e.target.checked },
+                  })
+                }}
+                className="h-4 w-4 rounded bg-[#070b14] border-[#1c2638] text-cyan-500 cursor-pointer"
+              />
+            </div>
 
-          <div className="p-3.5 bg-[#0a0f1d] border border-[#1c2638] rounded-lg flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-200">Device Lock / Biometrics</span>
-                {anchors.phone.device_lock ? (
-                  <Chip variant="success" size="xs">ACTIVE</Chip>
-                ) : (
-                  <Chip variant="danger" size="xs">DISABLED</Chip>
-                )}
+            <div className="p-3.5 bg-[#0a0f1d] border border-[#1c2638] rounded-lg flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-200">Device Lock / Biometrics</span>
+                  {anchors.phone.device_lock ? (
+                    <Chip variant="success" size="xs">ACTIVE</Chip>
+                  ) : (
+                    <Chip variant="danger" size="xs">DISABLED</Chip>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Blocks physical device access from granting SMS or Authenticator capabilities.
+                </p>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Blocks physical device access from granting SMS or Authenticator capabilities.
-              </p>
+              <input
+                type="checkbox"
+                checked={anchors.phone.device_lock}
+                onChange={(e) => {
+                  updateAnchorsMutation.mutate({
+                    phone: { ...anchors.phone, device_lock: e.target.checked },
+                  })
+                }}
+                className="h-4 w-4 rounded bg-[#070b14] border-[#1c2638] text-cyan-500 cursor-pointer"
+              />
             </div>
-            <input
-              type="checkbox"
-              checked={anchors.phone.device_lock}
-              onChange={(e) => {
-                updateAnchorsMutation.mutate({
-                  phone: { ...anchors.phone, device_lock: e.target.checked },
-                })
-              }}
-              className="h-4 w-4 rounded bg-[#070b14] border-[#1c2638] text-cyan-500 cursor-pointer"
-            />
           </div>
-        </div>
+        )}
       </Card>
 
       {/* Filters Bar */}
@@ -177,7 +277,51 @@ export const Accounts: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1c2638]/50">
-              {filteredAccounts.map((acct) => {
+              {isStateLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="py-3 pl-2"><Skeleton className="h-4 w-28" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-16" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-20" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-16" /></td>
+                    <td className="py-3"><Skeleton className="h-5 w-24" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-32" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-20" /></td>
+                    <td className="py-3 pr-2 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                  </tr>
+                ))
+              ) : filteredAccounts.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-500 font-mono-code">
+                    {accounts.length === 0 ? (
+                      'No accounts in inventory.'
+                    ) : (
+                      <div className="space-y-2">
+                        <p>No accounts match current filter criteria.</p>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() =>
+                            setFilters({
+                              search: '',
+                              band: 'all',
+                              serviceType: 'all',
+                              secondFactor: 'all',
+                              dataHeld: 'all',
+                              activityBucket: 'all',
+                              fallsIfCompromised: 'all',
+                            })
+                          }
+                          icon={<RotateCcw className="w-3 h-3" />}
+                        >
+                          Reset Filters
+                        </Button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                filteredAccounts.map((acct) => {
                 const an = analysisMap.get(acct.id)
                 return (
                   <tr
@@ -275,7 +419,7 @@ export const Accounts: React.FC = () => {
                     </td>
                   </tr>
                 )
-              })}
+              }))}
             </tbody>
           </table>
         </div>

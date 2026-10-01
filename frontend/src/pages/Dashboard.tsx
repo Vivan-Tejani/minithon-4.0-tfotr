@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   useAnalysis,
@@ -6,6 +6,7 @@ import {
   useSnapshots,
   useSelection,
   useApplyFix,
+  useSeedDemo,
 } from '../api/hooks'
 import { Card, Stat, BandBadge, Skeleton, Button } from '../components/ui'
 import { Graph, type GraphRef } from '../components/Graph'
@@ -23,6 +24,8 @@ import {
   Zap,
   Info,
   ShieldCheck,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -35,11 +38,16 @@ import {
 } from 'recharts'
 
 export const Dashboard: React.FC = () => {
-  const { data: analysis, isLoading: isAnalysisLoading } = useAnalysis()
+  useEffect(() => {
+    document.title = 'Security Dashboard | Chokepoint Auditor'
+  }, [])
+
+  const { data: analysis, isLoading: isAnalysisLoading, isError: isAnalysisError, refetch: refetchAnalysis } = useAnalysis()
   const { data: fixes } = useFixes()
   const { data: snapshots } = useSnapshots()
   const { openAccountDetail, ghostView } = useSelection()
   const applyFixMutation = useApplyFix()
+  const seedMutation = useSeedDemo()
   const graphRef = useRef<GraphRef>(null)
 
   const score = analysis?.score ?? 0
@@ -129,6 +137,54 @@ export const Dashboard: React.FC = () => {
           </Link>
         </div>
       )}
+      {/* Error Banner with Retry */}
+      {isAnalysisError && (
+        <div className="p-4 bg-red-950/40 border border-red-800 rounded-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-200">Failed to load posture analysis</p>
+              <p className="text-xs text-red-400/80">Unable to query /analysis endpoint telemetry.</p>
+            </div>
+          </div>
+          <Button variant="danger" size="sm" onClick={() => refetchAnalysis()}>
+            Retry Analysis
+          </Button>
+        </div>
+      )}
+
+      {/* Zero Accounts Empty State */}
+      {!isAnalysisLoading && !isAnalysisError && totalAccounts === 0 && (
+        <div className="p-6 bg-[#0c1220] border border-cyan-900/50 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-cyan-950/60 border border-cyan-800/80 rounded-lg text-cyan-400 flex-shrink-0">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold font-mono-code text-slate-100">Zero Registered Accounts in Inventory</h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-xl">
+                Load the standard 12-account cybersecurity persona or import your identity inventory to calculate attack graphs, recovery chokepoints, and blast radius.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => seedMutation.mutate()}
+              disabled={seedMutation.isPending}
+              icon={<Sparkles className="w-3.5 h-3.5" />}
+            >
+              {seedMutation.isPending ? 'Seeding...' : 'Load Demo Persona'}
+            </Button>
+            <Link to="/accounts">
+              <Button variant="outline" size="sm">
+                Add Accounts
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Primary Posture Overview & Gauge */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
@@ -192,13 +248,13 @@ export const Dashboard: React.FC = () => {
             <div className="bg-[#070c17]/90 border border-[#1c2638] rounded-md p-3">
               <div className="flex items-start gap-2">
                 <Info className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-200 leading-relaxed font-mono-code">
+                <div className="text-xs text-slate-200 leading-relaxed font-mono-code">
                   {isAnalysisLoading ? (
                     <Skeleton className="h-4 w-full" />
                   ) : (
                     analysis?.headline
                   )}
-                </p>
+                </div>
               </div>
             </div>
 
