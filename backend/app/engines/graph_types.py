@@ -8,7 +8,7 @@ from typing import Dict, List, Literal, Optional, Tuple
 @dataclass(frozen=True)
 class Method:
     id: str                       # e.g. "amazon#recovery:email:gmail"
-    label: str                    # e.g. "Recovery email reset via Gmail"
+    label: str                    # used in explanations: "Recovery email reset via Gmail"
     requires: Tuple[str, ...]     # node ids; ALL must be true (AND)
     fix_hints: Tuple[str, ...]    # fix ids that would remove this method
 
@@ -30,13 +30,17 @@ class Graph:
     order: List[str]              # deterministic: entries, then caps, then accounts (each sorted by id)
 
     def accounts(self) -> List[Node]:
+        """Returns all account nodes in the graph in deterministic order."""
         return [self.nodes[nid] for nid in self.order if self.nodes[nid].kind == "account"]
 
     def entries(self) -> List[Node]:
+        """Returns all entry nodes in the graph in deterministic order."""
         return [self.nodes[nid] for nid in self.order if self.nodes[nid].kind == "entry"]
 
     def caps(self) -> List[Node]:
+        """Returns all capability nodes in the graph in deterministic order."""
         return [self.nodes[nid] for nid in self.order if self.nodes[nid].kind == "cap"]
 
     def get(self, node_id: str) -> Optional[Node]:
+        """Retrieves a node by id, or None if not found."""
         return self.nodes.get(node_id)
