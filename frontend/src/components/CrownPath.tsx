@@ -1,5 +1,5 @@
 import React from "react";
-import { Path } from "./AccountDetail";
+import type { Path } from "./AccountDetail";
 
 export interface CrownPathProps {
   crownPath: {

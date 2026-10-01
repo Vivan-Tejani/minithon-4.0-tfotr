@@ -1,12 +1,22 @@
+"""Engine 2: Simulator for Chokepoint (Takeover Graph analysis).
+
+Implements:
+2a. Deterministic closure (closure_det) & cascade_rounds
+2b. Monte Carlo closure (closure_mc) with Common Random Numbers (CRN)
+2c. Metrics (P_i, EL, worst, score) & evaluate() wrapper
+2d. SPOF finder (find_spofs)
+2e. Path explorer (paths_into) & fix_effort
+2f. Explanations (explain_account, headline) & analyze_core
+M2-06. Analysis caching & clear_cache
+"""
 from __future__ import annotations
 
 import functools
 import zlib
-from typing import Any
+from typing import Any, Dict, List, Optional, Set, Tuple
 import numpy as np
 
 from app.engines.graph_types import Graph, Method, Node
-
 
 # =====================================================================
 # Ticket M2-06: Cache Utilities
@@ -31,233 +41,208 @@ def _make_cache_key(state: Any, settings: Any) -> str:
 # Ticket M2-01: Deterministic Closure
 # =====================================================================
 
-def closure_det(graph: Graph, forced: set[str] | list[str] | None = None) -> dict[str, Any]:
-    """Computes the deterministic takeover closure given a set of forced node IDs.
+def closure_det(graph: Graph, forced: Set[str] | List[str]) -> Dict[str, Any]:
+    """Compute deterministic takeover closure per PRD §6 2a.
 
-    Follows PRD §6 2a exact round semantics:
-    - Capabilities are zero-cost (settled iteratively within rounds).
-    - One hop per account round with snapshot semantics.
-    - via[account_id] is the label of the first satisfied method in method order.
-
-    Returns:
-        {"hop": {node_id: int}, "via": {account_id: str}}
+    Caps are zero-cost; accounts cost one hop per round with snapshot semantics.
+    Returns: {"hop": {id: int}, "via": {account_id: str}}
     """
-    forced_set = set(forced) if forced else set()
-    true_nodes: set[str] = set(forced_set)
-    hop: dict[str, int] = {f: 0 for f in forced_set}
-    via: dict[str, str] = {}
+    if not forced:
+        return {"hop": {}, "via": {}}
 
-    def settle_caps() -> None:
-        """Iteratively settles non-account nodes (capabilities/entries) at zero hop cost."""
+    true_set: Set[str] = set(forced)
+    hop: Dict[str, int] = {f: 0 for f in forced}
+    via: Dict[str, str] = {}
+
+    def settle_caps():
         changed = True
         while changed:
             changed = False
-            for n_id in graph.order:
-                node = graph.nodes.get(n_id)
-                if node is None or node.kind == "account" or n_id in true_nodes:
-                    continue
-                for m in node.methods:
-                    if m.requires and all(req in true_nodes for req in m.requires):
-                        true_nodes.add(n_id)
-                        hop[n_id] = 0
-                        changed = True
-                        break
+            for nid, node in graph.nodes.items():
+                if node.kind != "account" and nid not in true_set:
+                    for m in node.methods:
+                        if m.requires and all(r in true_set for r in m.requires):
+                            true_set.add(nid)
+                            hop[nid] = 0
+                            changed = True
+                            break
 
     settle_caps()
-    r = 0
+    accounts = graph.accounts()
+    round_num = 0
+
     while True:
-        r += 1
-        newly: list[tuple[str, str]] = []
-        # Snapshot semantics: evaluate accounts against true_nodes at the start of this round
-        for n_id in graph.order:
-            node = graph.nodes.get(n_id)
-            if node is None or node.kind != "account" or n_id in true_nodes:
-                continue
-            for m in node.methods:
-                if m.requires and all(req in true_nodes for req in m.requires):
-                    newly.append((n_id, m.label))
-                    break
+        round_num += 1
+        newly: List[str] = []
+        newly_via: Dict[str, str] = {}
+
+        for a in accounts:
+            if a.id not in true_set:
+                for m in a.methods:
+                    if m.requires and all(req in true_set for req in m.requires):
+                        newly.append(a.id)
+                        newly_via[a.id] = m.label
+                        break
 
         if not newly:
             break
 
-        for a_id, m_label in newly:
-            true_nodes.add(a_id)
-            hop[a_id] = r
-            via[a_id] = m_label
+        for aid in newly:
+            true_set.add(aid)
+            hop[aid] = round_num
+            via[aid] = newly_via[aid]
 
         settle_caps()
 
     return {"hop": hop, "via": via}
 
 
-def cascade_rounds(result: dict[str, Any]) -> list[dict[str, Any]]:
-    """Groups deterministic closure results into sequential rounds for UI animation.
+def cascade_rounds(det_result: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Format deterministic closure into rounds for the UI."""
+    hop = det_result.get("hop", {})
+    via = det_result.get("via", {})
 
-    Output format:
-        [{"round": 1, "accounts": [{"id": "gmail", "via": "Recovery by SMS code"}]}, ...]
-    """
-    hop_dict: dict[str, int] = result.get("hop", {})
-    via_dict: dict[str, str] = result.get("via", {})
+    rounds_dict: Dict[int, List[Dict[str, str]]] = {}
+    for node_id, r in hop.items():
+        if r > 0 and node_id.startswith("ACC:"):
+            acct_clean = node_id.replace("ACC:", "")
+            rounds_dict.setdefault(r, []).append({
+                "id": acct_clean,
+                "via": via.get(node_id, "Compromised"),
+            })
 
-    rounds_map: dict[int, list[dict[str, str]]] = {}
-    for a_id, m_label in via_dict.items():
-        r = hop_dict.get(a_id, 1)
-        if r <= 0:
-            continue
-        clean_id = a_id.replace("ACC:", "")
-        rounds_map.setdefault(r, []).append({"id": clean_id, "via": m_label})
-
-    output: list[dict[str, Any]] = []
-    for r in sorted(rounds_map.keys()):
-        # Sort accounts deterministically within round
-        sorted_accs = sorted(rounds_map[r], key=lambda x: x["id"])
-        output.append({"round": r, "accounts": sorted_accs})
-
-    return output
+    cascade = []
+    for r in sorted(rounds_dict.keys()):
+        cascade.append({
+            "round": r,
+            "accounts": sorted(rounds_dict[r], key=lambda x: x["id"]),
+        })
+    return cascade
 
 
 # =====================================================================
-# Ticket M2-02: Monte Carlo Closure + Metrics + evaluate()
+# Ticket M2-02: Monte Carlo Closure, Metrics & evaluate()
 # =====================================================================
 
 def sample_entries(
     graph: Graph,
     settings: Any,
-    forced_ids: set[str] | None = None,
-    trials: int | None = None,
-) -> dict[str, np.ndarray]:
-    """Samples entry point states using Common Random Numbers (CRN).
+    forced: Optional[Set[str]] = None,
+    trials: Optional[int] = None,
+    forced_ids: Optional[Set[str]] = None,
+) -> Dict[str, np.ndarray]:
+    """Sample entry states using Common Random Numbers (CRN) per PRD §6 2b."""
+    num_trials = trials or getattr(settings, "trials", 2000)
+    forced_input = forced_ids if forced_ids is not None else forced
+    forced_set = set(forced_input) if forced_input else set()
+    entry_states: Dict[str, np.ndarray] = {}
 
-    Entry sampling uses np.random.default_rng([seed, zlib.crc32(entry_id.encode())])
-    so that random worlds are identically reused across graph edits and fix evaluations.
-    """
-    if hasattr(settings, "seed"):
-        seed = settings.seed
-    elif isinstance(settings, dict):
-        seed = settings.get("seed", 42)
-    else:
-        seed = 42
+    seed_val = getattr(settings, "seed", 42)
 
-    if trials is None:
-        if hasattr(settings, "trials"):
-            trials = settings.trials
-        elif isinstance(settings, dict):
-            trials = settings.get("trials", 2000)
+    for node in graph.entries():
+        if node.id in forced_set:
+            entry_states[node.id] = np.ones(num_trials, dtype=bool)
         else:
-            trials = 2000
-
-    forced_set = set(forced_ids) if forced_ids else set()
-    entry_states: dict[str, np.ndarray] = {}
-
-    for entry in graph.entries():
-        entry_seed = [int(seed), zlib.crc32(entry.id.encode("utf-8"))]
-        rng = np.random.default_rng(entry_seed)
-        u = rng.random(trials)
-        p = entry.p if entry.p is not None else 0.0
-        state = u < p
-        if entry.id in forced_set:
-            state[:] = True
-        entry_states[entry.id] = state
+            crc = zlib.crc32(node.id.encode("utf-8"))
+            rng = np.random.default_rng([seed_val, crc])
+            u = rng.random(num_trials)
+            prob = node.p if node.p is not None else 0.0
+            entry_states[node.id] = u < prob
 
     return entry_states
 
 
 def closure_mc(
     graph: Graph,
-    entry_state: dict[str, np.ndarray],
-    forced: set[str] | list[str] | None = None,
-) -> dict[str, np.ndarray]:
-    """Runs vectorized Monte Carlo fixed-point sweeps over boolean arrays (trials,).
-
-    Performs monotone sweeps over graph.order until nothing changes (maximum 12 sweeps).
-    """
-    forced_set = set(forced) if forced else set()
-    if entry_state:
-        trials = len(next(iter(entry_state.values())))
-    else:
-        trials = 2000
-
-    taken: dict[str, np.ndarray] = {}
-    for n_id in graph.order:
-        if n_id in forced_set:
-            taken[n_id] = np.ones(trials, dtype=bool)
-        elif n_id in entry_state:
-            taken[n_id] = entry_state[n_id].copy()
+    entry_state: Dict[str, np.ndarray],
+    forced: Optional[Set[str]] = None,
+    trials: Optional[int] = None,
+    forced_ids: Optional[Set[str]] = None,
+) -> Dict[str, np.ndarray]:
+    """Vectorized Monte Carlo fixed-point sweep per PRD §6 2b."""
+    forced_input = forced_ids if forced_ids is not None else forced
+    forced_set = set(forced_input) if forced_input else set()
+    num_trials = trials
+    if num_trials is None:
+        if entry_state:
+            num_trials = len(next(iter(entry_state.values())))
         else:
-            taken[n_id] = np.zeros(trials, dtype=bool)
+            num_trials = 2000
 
-    # Monotone fixed-point sweeps
+    node_states: Dict[str, np.ndarray] = {}
+
+    for nid in graph.order:
+        node = graph.nodes[nid]
+        if nid in forced_set:
+            node_states[nid] = np.ones(num_trials, dtype=bool)
+        elif node.kind == "entry":
+            node_states[nid] = entry_state.get(nid, np.zeros(num_trials, dtype=bool))
+        else:
+            node_states[nid] = np.zeros(num_trials, dtype=bool)
+
+    # Monotone fixed-point sweep (max 12 sweeps)
     for _ in range(12):
         changed = False
-        for n_id in graph.order:
-            node = graph.nodes.get(n_id)
-            if node is None or node.kind == "entry":
-                continue
-            curr = taken[n_id]
-            if np.all(curr):
+        for nid in graph.order:
+            node = graph.nodes[nid]
+            if node.kind == "entry" or nid in forced_set:
                 continue
 
-            method_conds: list[np.ndarray] = []
+            current = node_states[nid]
+            if not node.methods:
+                continue
+
+            # Method evaluations (OR of ANDs)
+            any_method = np.zeros(num_trials, dtype=bool)
             for m in node.methods:
                 if not m.requires:
-                    method_conds.append(np.ones(trials, dtype=bool))
-                else:
-                    req_all = taken[m.requires[0]].copy()
-                    for req in m.requires[1:]:
-                        req_all &= taken[req]
-                    method_conds.append(req_all)
+                    continue
+                req_and = np.ones(num_trials, dtype=bool)
+                for req in m.requires:
+                    req_and &= node_states.get(req, np.zeros(num_trials, dtype=bool))
+                any_method |= req_and
 
-            if method_conds:
-                new_sat = method_conds[0]
-                for cond in method_conds[1:]:
-                    new_sat = new_sat | cond
-                updated = curr | new_sat
-                if not np.array_equal(updated, curr):
-                    taken[n_id] = updated
-                    changed = True
+            new_state = current | any_method
+            if not np.array_equal(current, new_state):
+                node_states[nid] = new_state
+                changed = True
 
         if not changed:
             break
 
-    return taken
+    return node_states
 
 
 def metrics(
     graph: Graph,
     settings: Any,
-    forced: set[str] | list[str] | None = None,
-    trials: int | None = None,
-) -> dict[str, Any]:
-    """Calculates privacy risk metrics: P_i, Expected Loss (EL), worst EL, and Privacy Score.
-
-    Formulas per PRD §6 2c:
-    - P_i = mean(taken_i)
-    - EL = sum(P_i * impact_i)
-    - worst = sum(impact_i)
-    - score = round(100 * (1 - EL / worst))
-    """
+    forced: Optional[Set[str]] = None,
+    trials: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Compute takeover probabilities, Expected Loss (EL), worst EL, and score per PRD §6 2c."""
+    num_trials = trials or getattr(settings, "trials", 2000)
     forced_set = set(forced) if forced else set()
-    entry_state = sample_entries(graph, settings, forced_ids=forced_set, trials=trials)
-    taken = closure_mc(graph, entry_state, forced=forced_set)
 
-    p_dict: dict[str, float] = {}
+    entry_states = sample_entries(graph, settings, forced=forced_set, trials=num_trials)
+    node_states = closure_mc(graph, entry_states, forced=forced_set, trials=num_trials)
+
+    p_dict: Dict[str, float] = {}
     el = 0.0
     worst = 0.0
 
-    for acc in graph.accounts():
-        clean_id = acc.id.replace("ACC:", "")
-        prob = float(np.mean(taken[acc.id]))
-        p_dict[clean_id] = round(prob, 4)
-        impact = float(acc.meta.get("impact", 1))
-        el += prob * impact
+    for a_node in graph.accounts():
+        acct_id = a_node.meta.get("account_id", a_node.id.replace("ACC:", ""))
+        impact = a_node.meta.get("impact", 1)
+        p_val = float(np.mean(node_states.get(a_node.id, np.zeros(num_trials, dtype=bool))))
+        p_dict[acct_id] = round(p_val, 4)
+        el += p_val * impact
         worst += impact
 
-    if worst > 0:
+    if worst <= 0.0:
+        score = 100
+    else:
         score = int(round(100.0 * (1.0 - (el / worst))))
         score = max(0, min(100, score))
-    else:
-        score = 100
 
     return {
         "p": p_dict,
@@ -270,158 +255,25 @@ def metrics(
 def evaluate(
     graph: Graph,
     settings: Any,
-    forced: set[str] | list[str] | None = None,
-    trials: int | None = None,
-) -> dict[str, Any]:
-    """Public wrapper called by Engine 3 (Fix Planner) and Engine 4 (Scenario Engine).
-
-    Args:
-        graph: Takeover Graph
-        settings: Settings object or dict (containing seed, trials, etc.)
-        forced: Optional set of node IDs forced to True
-        trials: Optional trial count override (e.g. 1000 for fast planner runs)
-
-    Returns:
-        dict: {"p": {account_id: float}, "el": float, "worst": float, "score": int}
-    """
+    forced: Optional[Set[str]] = None,
+    trials: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Public wrapper called by Engine 3 (Planner and Scenarios)."""
     return metrics(graph, settings, forced=forced, trials=trials)
 
 
 # =====================================================================
-# Ticket M2-03: SPOF Finder
+# Ticket M2-04: Path Explorer & fix_effort
 # =====================================================================
 
-def find_spofs(
-    graph: Graph,
-    settings: Any,
-    accounts_by_id: dict[str, Any] | None = None,
-    top: int = 8,
-) -> list[dict[str, Any]]:
-    """Identifies Single Points of Failure (SPOFs) ranked by expected loss increase (d_el).
+_EFFORT_RANK = {"low": 1, "medium": 2, "high": 3}
 
-    Candidates per PRD §6 2d:
-    - E_SIM
-    - E_PHONE
-    - Each password group with >= 2 members (forces each member's CAP_PW)
-    - Each individual account
-
-    Returns top candidates sorted by d_el descending, ties by falls descending.
-    """
-    base_metrics = metrics(graph, settings)
-    base_el = base_metrics["el"]
-
-    candidates: list[dict[str, Any]] = []
-
-    # 1. Entry candidates
-    if "E_SIM" in graph.nodes:
-        candidates.append({
-            "id": "E_SIM",
-            "label": "Your phone number (SIM swap)",
-            "kind": "entry",
-            "forced": {"E_SIM"},
-        })
-    if "E_PHONE" in graph.nodes:
-        candidates.append({
-            "id": "E_PHONE",
-            "label": "Your phone (lost or stolen)",
-            "kind": "entry",
-            "forced": {"E_PHONE"},
-        })
-
-    # 2. Password group candidates (>= 2 members)
-    groups: dict[str, list[str]] = {}
-    for acc in graph.accounts():
-        clean_id = acc.id.replace("ACC:", "")
-        group = None
-        if accounts_by_id and clean_id in accounts_by_id:
-            raw_acc = accounts_by_id[clean_id]
-            group = getattr(raw_acc, "password_group", None) if not isinstance(raw_acc, dict) else raw_acc.get("password_group")
-        if not group:
-            group = acc.meta.get("password_group")
-        if group:
-            groups.setdefault(str(group), []).append(clean_id)
-
-    for g_label, members in groups.items():
-        if len(members) >= 2:
-            # Force every member's CAP_PW node
-            pw_caps = set()
-            for m in members:
-                cap_id = f"CAP_PW:{m}"
-                if cap_id in graph.nodes:
-                    pw_caps.add(cap_id)
-            if not pw_caps:
-                # Fallback: force the accounts or entries if caps not directly named
-                pw_caps = {f"ACC:{m}" for m in members}
-
-            candidates.append({
-                "id": f"GROUP:{g_label}",
-                "label": f"Shared password '{g_label}'",
-                "kind": "group",
-                "forced": pw_caps,
-                "group_label": g_label,
-            })
-
-    # 3. Account candidates
-    for acc in graph.accounts():
-        clean_id = acc.id.replace("ACC:", "")
-        name = acc.meta.get("name", clean_id)
-        candidates.append({
-            "id": acc.id,
-            "label": f"{name} account",
-            "kind": "account",
-            "forced": {acc.id},
-            "target_account_id": acc.id,
-        })
-
-    spofs: list[dict[str, Any]] = []
-    for cand in candidates:
-        forced_nodes = cand["forced"]
-        det_res = closure_det(graph, forced=forced_nodes)
-        taken_hops = det_res["hop"]
-
-        # Collect fallen accounts
-        fallen: set[str] = set()
-        for nid, h in taken_hops.items():
-            node = graph.nodes.get(nid)
-            if node and node.kind == "account":
-                fallen.add(nid)
-
-        # Exclude candidate itself if it is an account
-        if cand["kind"] == "account":
-            fallen.discard(cand["id"])
-
-        falls_ids = sorted([aid.replace("ACC:", "") for aid in fallen])
-        falls = len(falls_ids)
-
-        # Evaluate marginal EL change
-        cand_metrics = metrics(graph, settings, forced=forced_nodes)
-        d_el = round(max(0.0, cand_metrics["el"] - base_el), 2)
-
-        spofs.append({
-            "id": cand["id"].replace("ACC:", ""),
-            "label": cand["label"],
-            "kind": cand["kind"],
-            "falls": falls,
-            "falls_ids": falls_ids,
-            "d_el": d_el,
-        })
-
-    # Sort by d_el desc, ties by falls desc
-    spofs.sort(key=lambda s: (s["d_el"], s["falls"]), reverse=True)
-    return spofs[:top]
-
-
-# =====================================================================
-# Ticket M2-04: Path Explorer
-# =====================================================================
 
 def fix_effort(fix_id: str) -> str:
-    """Returns the effort level ('low', 'medium', 'high') for a fix ID per PRD §6 Engine 3."""
-    if not fix_id:
-        return "low"
+    """Determine fix effort per PRD §6 Engine 3 table."""
     if fix_id in ("sim_lock", "device_lock"):
         return "low"
-    if fix_id.startswith("rm_login:") or fix_id.startswith("rm_recovery:") or fix_id.startswith("revoke:"):
+    if fix_id.startswith("rm_") or fix_id.startswith("revoke:"):
         return "low"
     if fix_id.startswith("2fa:") or fix_id.startswith("delete:"):
         return "medium"
@@ -430,21 +282,18 @@ def fix_effort(fix_id: str) -> str:
     return "low"
 
 
-_EFFORT_RANK = {"low": 1, "medium": 2, "high": 3}
-
-
 def paths_into(
     graph: Graph,
     target_account_id: str,
     max_hops: int = 4,
     limit: int = 5,
     settings: Any = None,
-) -> list[dict[str, Any]]:
-    """Explores minimal attack paths into target_account_id via backward derivation search.
+    band_low: float = 0.15,
+    band_high: float = 0.40,
+) -> List[Dict[str, Any]]:
+    """Backward path explorer per PRD §6 2e.
 
-    Returns:
-        list of {"entries": [str], "steps": [{"node": str, "hop": int, "via": str}],
-                 "likelihood": float, "band": str, "cut_fix_id": str}
+    Outputs: [{entries, steps: [{node, hop, via}], likelihood, band, cut_fix_id}]
     """
     target_nid = target_account_id if target_account_id.startswith("ACC:") else f"ACC:{target_account_id}"
     if target_nid not in graph.nodes:
@@ -452,8 +301,6 @@ def paths_into(
         if target_nid not in graph.nodes:
             return []
 
-    band_low = 0.15
-    band_high = 0.40
     if settings:
         if hasattr(settings, "band_low"):
             band_low = settings.band_low
@@ -462,14 +309,12 @@ def paths_into(
             band_low = settings.get("band_low", 0.15)
             band_high = settings.get("band_high", 0.40)
 
-    # Recursive backward search with cycle avoidance
-    # Derivation tuple: (frozenset[entry_ids], tuple[steps], tuple[fix_hints], max_account_hop)
-    memo: dict[tuple[str, frozenset[str]], list[tuple[frozenset[str], tuple[dict[str, Any], ...], tuple[str, ...], int]]] = {}
+    memo: Dict[Tuple[str, frozenset[str]], List[Tuple[frozenset[str], Tuple[Dict[str, Any], ...], Tuple[str, ...], int]]] = {}
 
     def get_derivations(
         node_id: str,
         visited: frozenset[str],
-    ) -> list[tuple[frozenset[str], tuple[dict[str, Any], ...], tuple[str, ...], int]]:
+    ) -> List[Tuple[frozenset[str], Tuple[Dict[str, Any], ...], Tuple[str, ...], int]]:
         key = (node_id, visited)
         if key in memo:
             return memo[key]
@@ -478,23 +323,20 @@ def paths_into(
         if node is None:
             return []
 
-        # Base case: Entry node
         if node.kind == "entry":
             hint = (node.fix_hint,) if node.fix_hint else ()
             return [(frozenset([node.id]), (), hint, 0)]
 
-        results: list[tuple[frozenset[str], tuple[dict[str, Any], ...], tuple[str, ...], int]] = []
+        results: List[Tuple[frozenset[str], Tuple[Dict[str, Any], ...], Tuple[str, ...], int]] = []
         new_visited = visited | {node_id}
 
         for m in node.methods:
             if not m.requires:
                 continue
 
-            # Check if any requirement is in visited (cycle)
             if any(r in visited for r in m.requires):
                 continue
 
-            # Cross-product of derivations of all required nodes
             req_derivations = []
             valid_method = True
             for r in m.requires:
@@ -507,14 +349,12 @@ def paths_into(
             if not valid_method:
                 continue
 
-            # Compute cross product
             combos = [([], (), (), 0)]
             for r_derivs in req_derivations:
                 next_combos = []
                 for existing_entries, existing_steps, existing_hints, existing_hop in combos:
                     for r_entries, r_steps, r_hints, r_hop in r_derivs:
                         combined_entries = set(existing_entries) | set(r_entries)
-                        # Merge steps
                         combined_steps = list(existing_steps)
                         for st in r_steps:
                             if st not in combined_steps:
@@ -531,7 +371,6 @@ def paths_into(
                         ))
                 combos = next_combos
 
-            # If current node is an account, add a step and increment hop
             for entries_set, steps_tuple, hints_tuple, current_hop in combos:
                 if node.kind == "account":
                     new_hop = current_hop + 1
@@ -546,39 +385,35 @@ def paths_into(
                     new_hints = hints_tuple + m.fix_hints
                     results.append((frozenset(entries_set), steps_tuple, new_hints, current_hop))
 
-        # Cap partial derivations at 30 per node
         results.sort(key=lambda d: (-len(d[0]), d[3]))
         memo[key] = results[:30]
         return memo[key]
 
     raw_derivations = get_derivations(target_nid, frozenset())
 
-    # Filter minimal derivations and drop supersets
-    paths: list[dict[str, Any]] = []
-    seen_entry_sets: set[frozenset[str]] = set()
+    paths: List[Dict[str, Any]] = []
+    seen_entry_sets: Set[frozenset[str]] = set()
 
-    # Sort candidate derivations by fewest entries and lowest hop
     sorted_derivs = sorted(raw_derivations, key=lambda d: (len(d[0]), d[3]))
 
     for entry_set, steps, hints, _ in sorted_derivs:
         if not entry_set:
             continue
 
-        # Drop supersets
         if any(es.issubset(entry_set) and es != entry_set for es in seen_entry_sets):
             continue
         if entry_set in seen_entry_sets:
             continue
         seen_entry_sets.add(entry_set)
 
-        # Calculate likelihood = product of entry probabilities
         likelihood = 1.0
         for e_id in entry_set:
             e_node = graph.nodes.get(e_id)
             p = e_node.p if (e_node and e_node.p is not None) else 1.0
             likelihood *= p
 
-        # Risk band
+        likelihood = round(likelihood, 4)
+
         if likelihood < band_low:
             band = "low"
         elif likelihood < band_high:
@@ -586,7 +421,6 @@ def paths_into(
         else:
             band = "high"
 
-        # Determine cut_fix_id: lowest effort hint, ties: first on the path
         best_fix = ""
         best_rank = 999
         for h in hints:
@@ -595,198 +429,287 @@ def paths_into(
                 best_rank = rank
                 best_fix = h
 
+        if not best_fix:
+            best_fix = "sim_lock" if "E_SIM" in entry_set else "device_lock"
+
         paths.append({
             "entries": sorted(list(entry_set)),
             "steps": list(steps),
-            "likelihood": round(likelihood, 4),
+            "likelihood": likelihood,
             "band": band,
-            "cut_fix_id": best_fix or "sim_lock",
+            "cut_fix_id": best_fix,
         })
 
-    # Sort final paths by likelihood descending, then fewest steps
-    paths.sort(key=lambda p: (p["likelihood"], -len(p["steps"])), reverse=True)
+    paths.sort(key=lambda p: p["likelihood"], reverse=True)
     return paths[:limit]
 
 
 # =====================================================================
-# Ticket M2-05: Explanations + analyze_core
+# Ticket M2-03: SPOF Finder
 # =====================================================================
 
-def headline(spofs: list[dict[str, Any]], n_accounts: int) -> str:
-    """Generates the primary dashboard headline sentence from the top SPOF."""
-    if not spofs:
-        return f"Evaluated {n_accounts} accounts with no single points of failure found."
+def find_spofs(
+    graph: Graph,
+    settings: Any = None,
+    accounts_by_id: Optional[Dict[str, Any]] = None,
+    top: int = 8,
+) -> List[Dict[str, Any]]:
+    """Find Single Points of Failure per PRD §6 2d.
 
-    top_spof = spofs[0]
-    falls = top_spof.get("falls", 0)
-    kind = top_spof.get("kind", "")
-    spof_id = top_spof.get("id", "")
-    label = top_spof.get("label", "")
+    Candidates: E_SIM, E_PHONE, each password group >= 2, each account.
+    """
+    trials = getattr(settings, "trials", 1500) if settings else 1500
+    base_m = metrics(graph, settings, trials=trials)
+    base_el = base_m["el"]
 
-    if kind == "entry":
-        if "SIM" in label or spof_id == "E_SIM":
-            return f"Your phone number alone can take over {falls} of your {n_accounts} accounts."
-        return f"Your {label.lower()} alone can take over {falls} of your {n_accounts} accounts."
-    elif kind == "group":
-        g_name = top_spof.get("group_label") or label.replace("Shared password '", "").replace("'", "")
-        return f"One leaked password ('{g_name}') can take over {falls} of your {n_accounts} accounts."
-    else:
-        clean_name = label.replace(" account", "")
-        return f"If {clean_name} is compromised, {falls} of your other accounts fall."
+    candidates: List[Tuple[str, str, str, Set[str]]] = [
+        ("E_SIM", "Your phone number (SIM swap)", "entry", {"E_SIM"}),
+        ("E_PHONE", "Your phone (lost or stolen)", "entry", {"E_PHONE"}),
+    ]
+
+    # Password groups
+    groups_members: Dict[str, List[str]] = {}
+    for node in graph.nodes.values():
+        if node.kind == "entry" and node.id.startswith("E_LEAK:"):
+            grp = node.meta.get("group")
+            if grp:
+                groups_members.setdefault(str(grp), []).append(node.id)
+
+    if accounts_by_id:
+        for aid, a in accounts_by_id.items():
+            grp = getattr(a, "password_group", None)
+            if grp:
+                cap_id = f"CAP_PW:{aid}"
+                if cap_id in graph.nodes:
+                    groups_members.setdefault(str(grp), []).append(cap_id)
+
+    for grp, leak_nodes in groups_members.items():
+        unique_nodes = list(dict.fromkeys(leak_nodes))
+        if len(unique_nodes) >= 2:
+            candidates.append((
+                f"GROUP:{grp}",
+                f"Shared password '{grp}'",
+                "group",
+                set(unique_nodes),
+            ))
+
+    for a_node in graph.accounts():
+        acct_id = a_node.meta.get("account_id", a_node.id.replace("ACC:", ""))
+        name = a_node.meta.get("name", acct_id)
+        candidates.append((
+            acct_id,
+            f"{name} account",
+            "account",
+            {a_node.id},
+        ))
+
+    spofs: List[Dict[str, Any]] = []
+    for cand_id, label, kind, forced_set in candidates:
+        det_res = closure_det(graph, forced=forced_set)
+        taken_accounts = [
+            nid.replace("ACC:", "")
+            for nid, h in det_res["hop"].items()
+            if h > 0 and nid.startswith("ACC:") and (nid != f"ACC:{cand_id}" and nid != cand_id)
+        ]
+        falls_count = len(taken_accounts)
+
+        mc_res = metrics(graph, settings, forced=forced_set, trials=trials)
+        d_el = max(0.0, round(mc_res["el"] - base_el, 2))
+
+        spofs.append({
+            "id": cand_id,
+            "label": label,
+            "kind": kind,
+            "falls": falls_count,
+            "falls_ids": sorted(taken_accounts),
+            "d_el": d_el,
+        })
+
+    # Sort by d_el desc, ties by falls desc
+    spofs.sort(key=lambda s: (s["d_el"], s["falls"]), reverse=True)
+    return spofs[:top]
 
 
-def explain_account(
-    name: str,
-    band: str,
-    p: float,
-    top_paths: list[dict[str, Any]],
-    best_fix_title: str | None = None,
-    reasons: list[str] | None = None,
-) -> str:
-    """Generates a plain-English explanation sentence for an account per PRD §6 2f."""
-    pct = int(round(p * 100))
-    routes_text = ""
+# =====================================================================
+# Ticket M2-05: Explanations, Headline & analyze_core
+# =====================================================================
+
+def explain_account(*args, **kwargs) -> Any:
+    """Generate template-based explanation and facts reasons list (PRD §6 2f).
+
+    Supports both:
+    1. explain_account(acct, p_val, band, top_paths, catalog=None) -> (why_str, reasons_list)
+    2. explain_account(name="...", band="...", p=..., top_paths=..., best_fix_title=..., reasons=...) -> why_str
+    """
+    if "name" in kwargs and ("best_fix_title" in kwargs or len(args) == 0):
+        name = kwargs.get("name", "Account")
+        band = kwargs.get("band", "low")
+        p_val = kwargs.get("p", 0.0)
+        pct = int(round(p_val * 100))
+        top_paths = kwargs.get("top_paths", [])
+        best_fix_title = kwargs.get("best_fix_title", "tightening account authentication")
+
+        route_str = ""
+        if top_paths:
+            steps = [s["node"] for s in top_paths[0].get("steps", []) if "node" in s]
+            if steps:
+                route_str = f" Easiest route: {' -> '.join(steps)}."
+
+        why = f"{name} has a {band} takeover likelihood ({pct}%).{route_str} Biggest single reduction: {best_fix_title}."
+        return why
+
+    acct = args[0] if len(args) > 0 else kwargs.get("acct")
+    p_val = args[1] if len(args) > 1 else kwargs.get("p_val", kwargs.get("p", 0.0))
+    band = args[2] if len(args) > 2 else kwargs.get("band", "low")
+    top_paths = args[3] if len(args) > 3 else kwargs.get("top_paths", [])
+    catalog = args[4] if len(args) > 4 else kwargs.get("catalog", None)
+
+    name = getattr(acct, "name", str(acct))
+    pct = int(round(p_val * 100))
+    reasons: List[str] = []
+
+    pw_group = getattr(acct, "password_group", None)
+    if pw_group:
+        reasons.append(f"reuses password in group '{pw_group}'")
+    sec_factor = getattr(acct, "second_factor", "none")
+    if sec_factor in ("none", "sms"):
+        reasons.append(f"weak 2FA ({sec_factor})")
+    breach = getattr(acct, "breach_flag", False)
+    if breach:
+        reasons.append("credentials flagged in breach")
+    perms = getattr(acct, "permissions", [])
+    for perm in perms:
+        if perm in ("sms", "photos") or str(perm).startswith("email_inbox:"):
+            reasons.append(f"permission '{perm}'")
+
+    r1_text = ""
+    r2_text = ""
+    cut_title = "tightening account authentication"
+
     if top_paths:
-        first_steps = " -> ".join([s["node"] for s in top_paths[0]["steps"]]) or "direct access"
-        routes_text = f"Easiest route: {first_steps}."
-        if len(top_paths) > 1:
-            second_steps = " -> ".join([s["node"] for s in top_paths[1]["steps"]]) or "alternative access"
-            routes_text += f" Second route: {second_steps}."
+        p0 = top_paths[0]
+        steps = [s["node"] for s in p0.get("steps", []) if "node" in s]
+        if steps:
+            entries = p0.get("entries", [])
+            if entries:
+                r1_text = f" Easiest route: {' → '.join(entries)} → {' → '.join(steps)}."
+            else:
+                r1_text = f" Easiest route: {' → '.join(steps)}."
+        else:
+            r1_text = f" Easiest route: direct via {p0.get('entries', ['credentials'])[0]}."
 
-    fix_text = f" Biggest single reduction: {best_fix_title}." if best_fix_title else ""
-    return f"{name} has a {band} takeover likelihood ({pct}%). {routes_text}{fix_text}".strip()
+        cut_fix = p0.get("cut_fix_id", "")
+        if cut_fix == "sim_lock":
+            cut_title = "turning on carrier SIM lock"
+        elif cut_fix.startswith("2fa:"):
+            cut_title = f"upgrading 2FA on {name}"
+        elif cut_fix.startswith("rm_login:"):
+            cut_title = f"removing SMS OTP login on {name}"
+
+    if len(top_paths) > 1:
+        p1 = top_paths[1]
+        steps2 = [s["node"] for s in p1.get("steps", []) if "node" in s]
+        if steps2:
+            entries2 = p1.get("entries", [])
+            if entries2:
+                r2_text = f" Alternate route: {' → '.join(entries2)} → {' → '.join(steps2)}."
+            else:
+                r2_text = f" Alternate route: {' → '.join(steps2)}."
+
+    sentence = f"{name} has a {band} takeover likelihood ({pct}%).{r1_text}{r2_text} Biggest single reduction: {cut_title}."
+    return sentence, reasons
+
+
+def headline(spofs: List[Dict[str, Any]], n_accounts: int) -> str:
+    """Generate headline summary sentence from top SPOF per PRD §6 2f."""
+    if not spofs:
+        return "Your accounts have low exposure to cascading takeovers."
+    top_spof = spofs[0]
+    falls = top_spof["falls"]
+    kind = top_spof.get("kind", "")
+    sid = top_spof.get("id", "")
+
+    if sid == "E_SIM":
+        return f"Your phone number alone can take over {falls} of your {n_accounts} accounts."
+    if sid == "E_PHONE":
+        return f"Your physical phone alone can access {falls} of your {n_accounts} accounts."
+    if kind == "group" or sid.startswith("GROUP:"):
+        g_name = sid.replace("GROUP:", "")
+        return f"One leaked password ('{g_name}') can take over {falls} of your {n_accounts} accounts."
+    label = top_spof.get("label", sid)
+    if label.endswith(" account"):
+        label = label[:-8]
+    return f"If {label} is compromised, {falls} of your other accounts fall."
 
 
 def analyze_core(
     graph: Graph,
     state: Any,
-    catalog: Any,
+    catalog: Optional[Any],
     settings: Any,
-) -> dict[str, Any]:
-    """Core analysis orchestrator for Engine 2.
+) -> Dict[str, Any]:
+    """Execute complete core analysis per PRD §6 2f and §7."""
+    accounts = getattr(state, "accounts", [])
+    accounts_by_id = {a.id: a for a in accounts}
+    trials = getattr(settings, "trials", 2000)
+    band_low = getattr(settings, "band_low", 0.15)
+    band_high = getattr(settings, "band_high", 0.40)
 
-    Returns:
-        dict matching PRD §7 GET /analysis:
-        {"score": int, "el": float, "worst": float, "headline": str,
-         "accounts": [AccountAnalysis], "spofs": [Spof], "crown_path": CrownPath}
-    """
-    accounts_by_id = {}
-    if hasattr(state, "accounts"):
-        for a in state.accounts:
-            aid = getattr(a, "id", None)
-            if aid:
-                accounts_by_id[aid] = a
+    mc_metrics = metrics(graph, settings, trials=trials)
+    spof_list = find_spofs(graph, settings, accounts_by_id=accounts_by_id, top=8)
+    head_txt = headline(spof_list, len(accounts))
 
-    # 1. Base metrics
-    base = metrics(graph, settings)
-    score = base["score"]
-    el = base["el"]
-    worst = base["worst"]
-    p_by_account = base["p"]
+    def get_band(p_val: float) -> str:
+        if p_val < band_low:
+            return "low"
+        if p_val < band_high:
+            return "medium"
+        return "high"
 
-    # 2. SPOFs
-    spofs = find_spofs(graph, settings, accounts_by_id=accounts_by_id, top=8)
+    accounts_output = []
+    max_impact = -1
+    crown_acct_id = None
+    crown_p = -1.0
 
-    # 3. Headline
-    num_accounts = len(graph.accounts())
-    hd = headline(spofs, num_accounts)
+    for acct in accounts:
+        p_val = mc_metrics["p"].get(acct.id, 0.0)
+        band_val = get_band(p_val)
+        a_node = graph.get(f"ACC:{acct.id}")
+        impact = a_node.meta.get("impact", 1) if a_node else 1
 
-    # 4. Password group lookup for reasons
-    group_members: dict[str, list[str]] = {}
-    for acc in graph.accounts():
-        clean_id = acc.id.replace("ACC:", "")
-        g = None
-        if clean_id in accounts_by_id:
-            raw_acc = accounts_by_id[clean_id]
-            g = getattr(raw_acc, "password_group", None) if not isinstance(raw_acc, dict) else raw_acc.get("password_group")
-        if not g:
-            g = acc.meta.get("password_group")
-        if g:
-            group_members.setdefault(str(g), []).append(clean_id)
+        top_p = paths_into(graph, acct.id, max_hops=4, limit=2, band_low=band_low, band_high=band_high)
+        why_str, reasons_list = explain_account(acct, p_val, band_val, top_p, catalog)
 
-    # 5. Account analysis items
-    accounts_analysis: list[dict[str, Any]] = []
-    max_impact = -1.0
-    crown_acc_id = ""
-    crown_top_path = None
-
-    for acc in graph.accounts():
-        clean_id = acc.id.replace("ACC:", "")
-        p = p_by_account.get(clean_id, 0.0)
-
-        # Risk band
-        band_low = getattr(settings, "band_low", 0.15) if hasattr(settings, "band_low") else 0.15
-        band_high = getattr(settings, "band_high", 0.40) if hasattr(settings, "band_high") else 0.40
-        if p < band_low:
-            band = "low"
-        elif p < band_high:
-            band = "medium"
-        else:
-            band = "high"
-
-        impact = int(acc.meta.get("impact", 1))
-        name = acc.meta.get("name", clean_id)
-
-        # Top paths
-        all_paths = paths_into(graph, clean_id, max_hops=4, limit=2, settings=settings)
-
-        # Crown jewel tracking (highest impact, tie break by higher p)
-        if impact > max_impact or (impact == max_impact and p > p_by_account.get(crown_acc_id, 0.0)):
-            max_impact = impact
-            crown_acc_id = clean_id
-            crown_top_path = all_paths[0] if all_paths else None
-
-        # Build reasons list from facts
-        reasons: list[str] = []
-        raw_obj = accounts_by_id.get(clean_id)
-        if raw_obj:
-            pw_group = getattr(raw_obj, "password_group", None) if not isinstance(raw_obj, dict) else raw_obj.get("password_group")
-            if pw_group and len(group_members.get(str(pw_group), [])) > 1:
-                others = [m for m in group_members[str(pw_group)] if m != clean_id]
-                reasons.append(f"reuses password group '{pw_group}' with {', '.join(others)}")
-
-            second_factor = getattr(raw_obj, "second_factor", "none") if not isinstance(raw_obj, dict) else raw_obj.get("second_factor", "none")
-            if second_factor == "none":
-                reasons.append("no second factor")
-            elif second_factor == "sms":
-                reasons.append("SMS 2FA vulnerable to SIM swap")
-
-            breach_flag = getattr(raw_obj, "breach_flag", False) if not isinstance(raw_obj, dict) else raw_obj.get("breach_flag", False)
-            if breach_flag:
-                reasons.append("flagged in known breach")
-
-            perms = getattr(raw_obj, "permissions", []) if not isinstance(raw_obj, dict) else raw_obj.get("permissions", [])
-            for perm in perms:
-                if perm == "sms":
-                    reasons.append("app has permission to read SMS")
-                elif str(perm).startswith("email_inbox"):
-                    reasons.append(f"app has permission to read email inbox ({perm})")
-
-        why_text = explain_account(name, band, p, all_paths, reasons=reasons)
-
-        accounts_analysis.append({
-            "id": clean_id,
-            "name": name,
-            "p": p,
-            "band": band,
+        accounts_output.append({
+            "id": acct.id,
+            "name": acct.name,
+            "p": round(p_val, 4),
+            "band": band_val,
             "impact": impact,
-            "why": why_text,
-            "reasons": reasons,
-            "top_paths": all_paths,
+            "why": why_str,
+            "reasons": reasons_list,
+            "top_paths": top_p,
         })
 
-    # Crown path object
-    crown_path_obj = {
-        "target": crown_acc_id or (accounts_analysis[0]["id"] if accounts_analysis else ""),
-        "path": crown_top_path,
-    }
+        if impact > max_impact or (impact == max_impact and p_val > crown_p):
+            max_impact = impact
+            crown_acct_id = acct.id
+            crown_p = p_val
+
+    crown_path_data = None
+    if crown_acct_id:
+        crown_paths = paths_into(graph, crown_acct_id, max_hops=4, limit=1, band_low=band_low, band_high=band_high)
+        crown_path_data = {
+            "target": crown_acct_id,
+            "path": crown_paths[0] if crown_paths else None,
+        }
 
     return {
-        "score": score,
-        "el": el,
-        "worst": worst,
-        "headline": hd,
-        "accounts": accounts_analysis,
-        "spofs": spofs,
-        "crown_path": crown_path_obj,
+        "score": mc_metrics["score"],
+        "el": mc_metrics["el"],
+        "worst": mc_metrics["worst"],
+        "headline": head_txt,
+        "accounts": accounts_output,
+        "spofs": spof_list,
+        "crown_path": crown_path_data,
     }

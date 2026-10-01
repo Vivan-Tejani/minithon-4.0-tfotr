@@ -1,15 +1,16 @@
+"""Graph types for Chokepoint (Engine 1 -> Engine 2/3/4 contract)."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Dict, List, Literal, Optional, Tuple
 
 
 @dataclass(frozen=True)
 class Method:
-    id: str                       # e.g., "amazon#recovery:email:gmail"
+    id: str                       # e.g. "amazon#recovery:email:gmail"
     label: str                    # used in explanations: "Recovery email reset via Gmail"
-    requires: tuple[str, ...]     # node ids; ALL must be true (AND)
-    fix_hints: tuple[str, ...]    # fix ids that would remove this method
+    requires: Tuple[str, ...]     # node ids; ALL must be true (AND)
+    fix_hints: Tuple[str, ...]    # fix ids that would remove this method
 
 
 @dataclass
@@ -17,25 +18,29 @@ class Node:
     id: str
     kind: Literal["entry", "cap", "account"]
     label: str
-    p: float | None = None                    # entries only
-    methods: list[Method] = field(default_factory=list)   # OR of methods; [] = never true
-    fix_hint: str | None = None               # entries only (e.g. "sim_lock")
-    meta: dict = field(default_factory=dict)  # account: {impact,name,type}; entry: {group?}
+    p: Optional[float] = None                       # entries only
+    methods: List[Method] = field(default_factory=list)  # OR of methods; [] = never true
+    fix_hint: Optional[str] = None                  # entries only (e.g. "sim_lock")
+    meta: dict = field(default_factory=dict)         # account: {impact, name, type}; entry: {group?}
 
 
 @dataclass
 class Graph:
-    nodes: dict[str, Node]
-    order: list[str]              # deterministic: entries, then caps, then accounts (each sorted by id)
+    nodes: Dict[str, Node]
+    order: List[str]              # deterministic: entries, then caps, then accounts (each sorted by id)
 
-    def accounts(self) -> list[Node]:
+    def accounts(self) -> List[Node]:
         """Returns all account nodes in the graph in deterministic order."""
         return [self.nodes[nid] for nid in self.order if self.nodes[nid].kind == "account"]
 
-    def entries(self) -> list[Node]:
+    def entries(self) -> List[Node]:
         """Returns all entry nodes in the graph in deterministic order."""
         return [self.nodes[nid] for nid in self.order if self.nodes[nid].kind == "entry"]
 
-    def get(self, id: str) -> Node | None:
+    def caps(self) -> List[Node]:
+        """Returns all capability nodes in the graph in deterministic order."""
+        return [self.nodes[nid] for nid in self.order if self.nodes[nid].kind == "cap"]
+
+    def get(self, node_id: str) -> Optional[Node]:
         """Retrieves a node by id, or None if not found."""
-        return self.nodes.get(id)
+        return self.nodes.get(node_id)
