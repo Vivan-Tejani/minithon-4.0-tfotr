@@ -797,7 +797,15 @@ def compute_preview(
     changed_account_id: str | None = None
 
     if op == "upsert_account":
-        acct = Account.model_validate(payload_data)
+        if isinstance(payload_data, dict):
+            pdata = dict(payload_data)
+            if not pdata.get("last_activity"):
+                pdata["last_activity"] = getattr(state, "now", "2026-03-31")[:10]
+            acct = Account.model_validate(pdata)
+        elif isinstance(payload_data, Account):
+            acct = payload_data
+        else:
+            acct = Account.model_validate(payload_data)
         changed_account_id = acct.id
         idx = next((i for i, a in enumerate(state_after.accounts) if a.id == acct.id), None)
         if idx is not None:

@@ -351,7 +351,7 @@ def import_state(payload: dict):
 # Ghost Preview Endpoint (Ticket M3-06 / M1-07)
 class PreviewPayload(BaseModel):
     op: str
-    account: Optional[Account] = None
+    account: Optional[Dict[str, Any]] = None
     fix_id: Optional[str] = None
 
 
@@ -365,8 +365,8 @@ def preview_change(payload: PreviewPayload):
 
     try:
         data = (
-            payload.account.model_dump()
-            if (payload.op == "upsert_account" and payload.account)
+            payload.account
+            if (payload.op == "upsert_account" and payload.account is not None)
             else payload.fix_id
         )
         if data is None:

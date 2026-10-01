@@ -71,7 +71,7 @@ class Account(BaseModel):
     password_group: Optional[str] = None
     permissions: List[str] = Field(default_factory=list)
     data_held: List[str] = Field(default_factory=list)
-    last_activity: str
+    last_activity: str = Field(default="2026-03-31")
     breach_flag: bool = False
     importance_override: Optional[int] = None
 
@@ -85,11 +85,24 @@ class Account(BaseModel):
             raise ValueError("Account id must be lowercase alphanumeric with underscores/hyphens")
         return slug
 
-    @field_validator("importance_override")
+    @field_validator("importance_override", mode="before")
     @classmethod
-    def validate_importance_override(cls, v: Optional[int]) -> Optional[int]:
-        if v is not None and not (1 <= v <= 10):
-            raise ValueError("importance_override must be between 1 and 10")
+    def validate_importance_override(cls, v: Any) -> Optional[int]:
+        if v is None or v == "":
+            return None
+        if isinstance(v, str):
+            mapping = {"low": 3, "medium": 6, "high": 9}
+            if v.strip().lower() in mapping:
+                return mapping[v.strip().lower()]
+            try:
+                v = int(v.strip())
+            except ValueError:
+                raise ValueError("importance_override must be an integer between 1 and 10 or 'low'/'medium'/'high'")
+        if isinstance(v, (int, float)):
+            v_int = int(v)
+            if not (1 <= v_int <= 10):
+                raise ValueError("importance_override must be between 1 and 10")
+            return v_int
         return v
 
     @field_validator("second_factor")

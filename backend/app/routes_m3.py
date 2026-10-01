@@ -29,16 +29,26 @@ def get_current_state() -> State:
     """Load current state from store if available, else in-memory/persona."""
     global _ACTIVE_STATE
     try:
-        from app.store import load_state
-        st = load_state()
-        if st.accounts:
-            return st
+        from app import store
+        conn = store.get_connection()
+        try:
+            cur = conn.execute("SELECT json FROM kv WHERE key = 'state'")
+            row = cur.fetchone()
+            if row and row["json"]:
+                return State.model_validate_json(row["json"])
+        finally:
+            conn.close()
     except Exception:
         try:
-            from backend.app.store import load_state
-            st = load_state()
-            if st.accounts:
-                return st
+            from backend.app import store
+            conn = store.get_connection()
+            try:
+                cur = conn.execute("SELECT json FROM kv WHERE key = 'state'")
+                row = cur.fetchone()
+                if row and row["json"]:
+                    return State.model_validate_json(row["json"])
+            finally:
+                conn.close()
         except Exception:
             pass
 
@@ -186,6 +196,15 @@ def apply_fix_endpoint(fix_id: str = Path(...)) -> dict[str, Any]:
     # Commit state
     save_current_state(state_after)
     clear_planner_cache()
+    try:
+        from app import service
+        service.clear_cache()
+    except Exception:
+        try:
+            from backend.app import service
+            service.clear_cache()
+        except Exception:
+            pass
 
     # Record snapshot & event
     snap_id = 1

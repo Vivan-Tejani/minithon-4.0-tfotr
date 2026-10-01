@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ServiceType = Literal[
     "email",
@@ -64,9 +64,26 @@ class Account(BaseModel):
     password_group: str | None = None
     permissions: list[str] = Field(default_factory=list)
     data_held: list[str] = Field(default_factory=list)
-    last_activity: str
+    last_activity: str = "2026-03-31"
     breach_flag: bool = False
     importance_override: int | None = None
+
+    @field_validator("importance_override", mode="before")
+    @classmethod
+    def validate_importance_override(cls, v: Any) -> int | None:
+        if v is None or v == "":
+            return None
+        if isinstance(v, str):
+            mapping = {"low": 3, "medium": 6, "high": 9}
+            if v.strip().lower() in mapping:
+                return mapping[v.strip().lower()]
+            try:
+                return int(v.strip())
+            except ValueError:
+                raise ValueError("importance_override must be an integer between 1 and 10 or 'low'/'medium'/'high'")
+        if isinstance(v, (int, float)):
+            return int(v)
+        return v
 
 
 class Settings(BaseModel):
