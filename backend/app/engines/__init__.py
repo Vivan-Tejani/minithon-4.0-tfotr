@@ -12,6 +12,10 @@ from backend.app.engines.scenario_review import (
     run_scenario,
     cascade_rounds,
     closure_det,
+    add_snapshot,
+    get_snapshots,
+    to_view,
+    compute_preview,
 )
 from backend.app.engines.fix_planner import (
     plan,
@@ -31,6 +35,10 @@ __all__ = [
     "run_scenario",
     "cascade_rounds",
     "closure_det",
+    "add_snapshot",
+    "get_snapshots",
+    "to_view",
+    "compute_preview",
     "plan",
     "evaluate_state",
     "clear_planner_cache",

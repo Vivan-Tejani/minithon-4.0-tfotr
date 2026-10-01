@@ -3,17 +3,21 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query, Path
 from pydantic import BaseModel
 
-from backend.app.data.loader import State, load_persona
+from backend.app.data.loader import State, load_persona, load_catalog, Account
 from backend.app.engines.scenario_review import (
     add_event,
     get_events,
     run_review,
     run_scenario,
+    compute_preview,
+    add_snapshot,
+    get_snapshots,
 )
-from backend.app.engines.fix_planner import plan
+from backend.app.engines.fix_planner import plan, evaluate_state, clear_planner_cache
+from backend.app.engines.fix_library import apply_fix, generate_candidates
 
 router = APIRouter(prefix="", tags=["m3"])
 
@@ -100,6 +104,96 @@ def post_scenario(payload: ScenarioRequest) -> dict[str, Any]:
         return run_scenario(state=state, kind=payload.kind, target=payload.target)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+class PreviewRequest(BaseModel):
+    op: str
+    account: dict[str, Any] | None = None
+    fix_id: str | None = None
+
+
+@router.post("/preview")
+def post_preview(payload: PreviewRequest) -> dict[str, Any]:
+    """Preview effect of an account edit or fix before committing."""
+    state = get_current_state()
+    try:
+        data = payload.account if payload.op == "upsert_account" else payload.fix_id
+        if data is None:
+            raise ValueError(f"Missing data payload for preview op '{payload.op}'")
+        return compute_preview(state=state, op=payload.op, payload_data=data)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@router.post("/fixes/{fix_id}/apply")
+def apply_fix_endpoint(fix_id: str = Path(...)) -> dict[str, Any]:
+    """Apply a fix to the active state, update history, and create a snapshot."""
+    state = get_current_state()
+    catalog = load_catalog()
+
+    # Validate fix_id format
+    valid_prefixes = (
+        "sim_lock",
+        "device_lock",
+        "2fa:",
+        "rm_login:",
+        "rm_recovery:",
+        "unique_pw:",
+        "revoke:",
+        "delete:",
+    )
+    if not (fix_id in ("sim_lock", "device_lock") or any(fix_id.startswith(p) for p in valid_prefixes)):
+        raise HTTPException(status_code=404, detail=f"Unknown fix '{fix_id}'")
+
+    ev_before = evaluate_state(state, catalog, state.settings)
+    score_before = ev_before["score"]
+
+    state_after = apply_fix(state, fix_id, catalog)
+    ev_after = evaluate_state(state_after, catalog, state.settings)
+    score_after = ev_after["score"]
+
+    # Check if this application was a no-op (state unchanged)
+    if state_after.model_dump() == state.model_dump():
+        snapshots = get_snapshots()
+        latest_version = snapshots[-1]["id"] if snapshots else 0
+        return {
+            "score_before": score_before,
+            "score_after": score_after,
+            "state_version": latest_version,
+        }
+
+    # Find human title for snapshot label
+    candidates = generate_candidates(state, catalog)
+    matched_candidate = next((c for c in candidates if c.id == fix_id), None)
+    title = matched_candidate.title if matched_candidate else fix_id
+
+    # Commit state
+    save_current_state(state_after)
+    clear_planner_cache()
+
+    # Record snapshot & event
+    snap = add_snapshot(score=score_after, el=ev_after["el"], label=f"Applied: {title}")
+    add_event(
+        kind="fix_applied",
+        title=f"Applied: {title}",
+        detail={
+            "fix_id": fix_id,
+            "score_before": score_before,
+            "score_after": score_after,
+        },
+    )
+
+    return {
+        "score_before": score_before,
+        "score_after": score_after,
+        "state_version": snap["id"],
+    }
+
+
+@router.get("/snapshots")
+def get_snapshots_list() -> list[dict[str, Any]]:
+    """Retrieve ordered timeline of score snapshots."""
+    return get_snapshots()
 
 
 @router.get("/events")
