@@ -1,0 +1,77 @@
+{
+  "as_of": "2026-10-01",
+  "items": [
+    {
+      "id": "weak_2fa:upi",
+      "kind": "weak_2fa",
+      "target": "upi",
+      "title": "High-Value Financial Account Missing 2FA: PhonePe / UPI",
+      "detail": "Impact score is 10/10 with sensitive payment permissions, but only SMS OTP login is enabled.",
+      "severity": "high",
+      "fix_id": "sim_lock"
+    },
+    {
+      "id": "unused_backup_email:hotmail",
+      "kind": "unused_backup_email",
+      "target": "hotmail",
+      "title": "Stale Backup Email Servicing Active Vaults: Hotmail",
+      "detail": "Hotmail has not been accessed since March 2022, yet it acts as the primary password recovery route for Dropbox Cloud Vault.",
+      "severity": "high",
+      "fix_id": "rm_recovery:dropbox:email:hotmail"
+    },
+    {
+      "id": "stale_account:oldforum",
+      "kind": "stale_account",
+      "target": "oldforum",
+      "title": "Breached Credential Vector: DevSec Enthusiast Forum",
+      "detail": "Inactive for over 2,600 days. Shares password group 'A' with active shopping and primary mail accounts.",
+      "severity": "high",
+      "fix_id": "delete:oldforum"
+    },
+    {
+      "id": "weak_2fa:amazon",
+      "kind": "weak_2fa",
+      "target": "amazon",
+      "title": "Missing Strong 2FA: Amazon",
+      "detail": "Impact score is 10/10 with stored cards. Currently has no authenticator or hardware key configured.",
+      "severity": "high",
+      "fix_id": "2fa:amazon"
+    },
+    {
+      "id": "weak_2fa:dropbox",
+      "kind": "weak_2fa",
+      "target": "dropbox",
+      "title": "Confidential Storage Missing 2FA: Dropbox",
+      "detail": "Impact score is 9/10 with government ID records. Relies on single password factor and stale recovery email.",
+      "severity": "high",
+      "fix_id": "2fa:dropbox"
+    },
+    {
+      "id": "reuse:GROUP:A",
+      "kind": "reuse",
+      "target": "GROUP:A",
+      "title": "Password Group 'A' Reused Across 4 Accounts",
+      "detail": "Netflix, Hotmail, Amazon, and OldForum share an identical password, exposing shopping & storage if any one leaks.",
+      "severity": "medium",
+      "fix_id": "unique_pw:A"
+    },
+    {
+      "id": "reuse:GROUP:B",
+      "kind": "reuse",
+      "target": "GROUP:B",
+      "title": "Password Group 'B' Shared Between 2 Accounts",
+      "detail": "Instagram and Canva share an identical password.",
+      "severity": "medium",
+      "fix_id": "unique_pw:B"
+    },
+    {
+      "id": "periodic_review:global",
+      "kind": "periodic_review",
+      "target": "system",
+      "title": "Quarterly Digital Footprint Audit Due",
+      "detail": "Your digital inventory has not undergone a full scheduled security audit in over 30 days.",
+      "severity": "low",
+      "fix_id": null
+    }
+  ]
+}
