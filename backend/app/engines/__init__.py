@@ -9,6 +9,9 @@ from backend.app.engines.scenario_review import (
     add_event,
     get_events,
     account_impact,
+    run_scenario,
+    cascade_rounds,
+    closure_det,
 )
 from backend.app.engines.fix_planner import (
     plan,
@@ -25,6 +28,9 @@ __all__ = [
     "add_event",
     "get_events",
     "account_impact",
+    "run_scenario",
+    "cascade_rounds",
+    "closure_det",
     "plan",
     "evaluate_state",
     "clear_planner_cache",

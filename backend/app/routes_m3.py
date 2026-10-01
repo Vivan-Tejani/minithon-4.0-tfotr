@@ -3,11 +3,16 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.app.data.loader import State, load_persona
-from backend.app.engines.scenario_review import add_event, get_events, run_review
+from backend.app.engines.scenario_review import (
+    add_event,
+    get_events,
+    run_review,
+    run_scenario,
+)
 from backend.app.engines.fix_planner import plan
 
 router = APIRouter(prefix="", tags=["m3"])
@@ -80,6 +85,21 @@ def get_fixes(k_full: int = Query(default=8, ge=1, le=20)) -> dict[str, Any]:
     """Retrieve ranked fix plan, best-3 recommendations, and quick wins."""
     state = get_current_state()
     return plan(state=state, k_full=k_full)
+
+
+class ScenarioRequest(BaseModel):
+    kind: str
+    target: str
+
+
+@router.post("/scenario")
+def post_scenario(payload: ScenarioRequest) -> dict[str, Any]:
+    """Simulate attack scenario and return cascade, metrics delta, and next actions."""
+    state = get_current_state()
+    try:
+        return run_scenario(state=state, kind=payload.kind, target=payload.target)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @router.get("/events")
