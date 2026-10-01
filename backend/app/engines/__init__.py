@@ -10,6 +10,11 @@ from backend.app.engines.scenario_review import (
     get_events,
     account_impact,
 )
+from backend.app.engines.fix_planner import (
+    plan,
+    evaluate_state,
+    clear_planner_cache,
+)
 
 __all__ = [
     "Fix",
@@ -20,4 +25,7 @@ __all__ = [
     "add_event",
     "get_events",
     "account_impact",
+    "plan",
+    "evaluate_state",
+    "clear_planner_cache",
 ]

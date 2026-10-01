@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from backend.app.data.loader import State, load_persona
 from backend.app.engines.scenario_review import add_event, get_events, run_review
+from backend.app.engines.fix_planner import plan
 
 router = APIRouter(prefix="", tags=["m3"])
 
@@ -72,6 +73,13 @@ def complete_review(payload: ReviewCompleteRequest | None = Body(default=None)) 
         "ok": True,
         "last_review_at": as_of_val,
     }
+
+
+@router.get("/fixes")
+def get_fixes(k_full: int = Query(default=8, ge=1, le=20)) -> dict[str, Any]:
+    """Retrieve ranked fix plan, best-3 recommendations, and quick wins."""
+    state = get_current_state()
+    return plan(state=state, k_full=k_full)
 
 
 @router.get("/events")
