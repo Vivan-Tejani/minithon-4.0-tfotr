@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ToastProvider } from './components/ui'
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ToastProvider, globalToast } from './components/ui'
 import { SelectionProvider } from './api/hooks'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
@@ -9,6 +9,16 @@ import { Fixes } from './pages/Fixes'
 import { Scenarios } from './pages/Scenarios'
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error: Error) => {
+      globalToast.error('Network Error', error?.message || 'Failed to query endpoint telemetry')
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error: Error) => {
+      globalToast.error('Operation Failed', error?.message || 'Mutation failed to persist')
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes

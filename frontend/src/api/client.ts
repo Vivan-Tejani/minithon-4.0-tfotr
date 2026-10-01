@@ -1,6 +1,7 @@
 /**
  * Chokepoint API Client
  * Supports mock simulation and seamless per-endpoint real API flipping.
+ * Strictly adheres to PRD §5 & §7 endpoints.
  */
 
 import mockState from './mocks/state.json'
@@ -21,9 +22,6 @@ import type {
   State,
 } from './types'
 
-// Global mock master toggle (defaults to true if unset)
-const envUseMock = import.meta.env.VITE_USE_MOCK !== 'false'
-
 // In-memory clone for stateful mock mutations
 let currentMockState: State = JSON.parse(JSON.stringify(mockState)) as State
 let currentMockSnapshots: Snapshot[] = JSON.parse(JSON.stringify(mockSnapshots)) as Snapshot[]
@@ -31,28 +29,138 @@ let currentMockEvents: EventItem[] = JSON.parse(JSON.stringify(mockEvents)) as E
 let currentMockAnalysis: Analysis = JSON.parse(JSON.stringify(mockAnalysis)) as Analysis
 let currentMockFixes: FixPlan = JSON.parse(JSON.stringify(mockFixes)) as FixPlan
 
-// Per-endpoint override map: true = force real, false = keep default mock
-export const endpointOverrides: Record<string, boolean> = {
-  health: false,
-  state: false,
-  anchors: false,
-  accounts: false,
-  catalog: false,
-  seed: false,
-  analysis: false,
-  paths: false,
-  fixes: false,
-  preview: false,
-  scenario: false,
-  review: false,
-  events: false,
-  snapshots: false,
-  settings: false,
+// Local storage key for persistent endpoint toggle overrides
+const STORAGE_KEY = 'chokepoint_endpoint_overrides'
+const MASTER_MOCK_KEY = 'chokepoint_use_mock_master'
+
+function loadStoredOverrides(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // fallback
+  }
+  return {
+    health: false,
+    state: false,
+    anchors: false,
+    accounts: false,
+    catalog: false,
+    seed: false,
+    analysis: false,
+    paths: false,
+    fixes: false,
+    preview: false,
+    scenario: false,
+    review: false,
+    events: false,
+    snapshots: false,
+    settings: false,
+  }
+}
+
+export const endpointOverrides: Record<string, boolean> = loadStoredOverrides()
+
+export function getEndpointOverrides(): Record<string, boolean> {
+  return { ...endpointOverrides }
+}
+
+type OverrideChangeListener = () => void
+const overrideListeners = new Set<OverrideChangeListener>()
+
+export function onOverridesChange(fn: OverrideChangeListener): () => void {
+  overrideListeners.add(fn)
+  return () => overrideListeners.delete(fn)
+}
+
+function notifyListeners() {
+  overrideListeners.forEach((fn) => {
+    try {
+      fn()
+    } catch {
+      // ignore
+    }
+  })
+}
+
+export function setEndpointOverride(endpointKey: string, forceReal: boolean): void {
+  endpointOverrides[endpointKey] = forceReal
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(endpointOverrides))
+  } catch {
+    // ignore
+  }
+  notifyListeners()
 }
 
 export function isUsingMock(endpointKey: string): boolean {
+  try {
+    const master = localStorage.getItem(MASTER_MOCK_KEY)
+    if (master !== null) {
+      if (master === 'false') return false
+      if (endpointOverrides[endpointKey]) return false
+      return true
+    }
+  } catch {
+    // fallback
+  }
+
   if (endpointOverrides[endpointKey]) return false
-  return envUseMock
+  return import.meta.env.VITE_USE_MOCK !== 'false'
+}
+
+export function isMasterMockEnabled(): boolean {
+  try {
+    const master = localStorage.getItem(MASTER_MOCK_KEY)
+    if (master !== null) return master === 'true'
+  } catch {
+    // fallback
+  }
+  return import.meta.env.VITE_USE_MOCK !== 'false'
+}
+
+export function setMasterMock(useMock: boolean): void {
+  try {
+    localStorage.setItem(MASTER_MOCK_KEY, String(useMock))
+  } catch {
+    // ignore
+  }
+  notifyListeners()
+}
+
+export function resetMockData(): void {
+  currentMockState = {
+    anchors: { phone: { sim_lock: false, device_lock: true } },
+    accounts: [],
+    settings: JSON.parse(JSON.stringify(mockState.settings)),
+    last_review_at: null,
+    now: new Date().toISOString(),
+  }
+  currentMockAnalysis = {
+    score: 100,
+    el: 0,
+    worst: 10,
+    headline: 'No accounts registered. Add accounts to evaluate attack paths.',
+    accounts: [],
+    spofs: [],
+    crown_path: null,
+    graph: { nodes: [], edges: [] },
+  }
+  currentMockFixes = {
+    base_score: 100,
+    best3: [],
+    quick_wins: [],
+    plan: [],
+  }
+  currentMockSnapshots = [
+    {
+      id: 1,
+      ts: new Date().toISOString(),
+      score: 100,
+      el: 0,
+      label: 'Inventory Reset to Empty',
+    },
+  ]
 }
 
 const BASE_URL = '/api'
@@ -149,6 +257,13 @@ export const api = {
       currentMockState = JSON.parse(JSON.stringify(mockState)) as State
       currentMockAnalysis = JSON.parse(JSON.stringify(mockAnalysis)) as Analysis
       currentMockFixes = JSON.parse(JSON.stringify(mockFixes)) as FixPlan
+      currentMockSnapshots = JSON.parse(JSON.stringify(mockSnapshots)) as Snapshot[]
+      return { ok: true } as unknown as T
+    }
+
+    if (cleanPath === '/reset') {
+      if (!isUsingMock('seed')) return realFetch<T>(path, { method: 'POST', body: JSON.stringify(body) })
+      resetMockData()
       return { ok: true } as unknown as T
     }
 
