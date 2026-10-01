@@ -67,6 +67,16 @@ def get_analysis():
     return service.analyze(state)
 
 
+@api_router.get("/paths/{account_id}")
+def get_account_paths(account_id: str):
+    state = store.load_state()
+    res = service.analyze(state)
+    target = next((a for a in res["accounts"] if a["id"] == account_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Account '{account_id}' not found")
+    return {"paths": target.get("top_paths", [])}
+
+
 @api_router.put("/anchors", response_model=Anchors)
 def update_anchors(anchors: Anchors):
     state = store.load_state()
@@ -256,6 +266,61 @@ def import_state(payload: dict):
     return new_state
 
 
+# Ghost Preview Endpoint (Ticket M3-06 / M1-07)
+class PreviewPayload(BaseModel):
+    op: str
+    account: Optional[Account] = None
+    fix_id: Optional[str] = None
+
+
+@api_router.post("/preview")
+def preview_change(payload: PreviewPayload):
+    state = store.load_state()
+    try:
+        from app.engines.scenario_review import compute_preview
+    except ImportError:
+        from backend.app.engines.scenario_review import compute_preview
+
+    try:
+        data = (
+            payload.account.model_dump()
+            if (payload.op == "upsert_account" and payload.account)
+            else payload.fix_id
+        )
+        if data is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Missing data payload for preview op '{payload.op}'",
+            )
+        return compute_preview(state=state, op=payload.op, payload_data=data)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+# Scenario Cascade Endpoint (Ticket M3-05 / M1-06)
+class ScenarioPayload(BaseModel):
+    kind: str
+    target: str
+
+
+@api_router.post("/scenario")
+def run_scenario(payload: ScenarioPayload):
+    state = store.load_state()
+    try:
+        from app.engines.scenario_review import run_scenario as engine_run_scenario
+    except ImportError:
+        from backend.app.engines.scenario_review import run_scenario as engine_run_scenario
+
+    try:
+        return engine_run_scenario(
+            state=state,
+            kind=payload.kind,
+            target=payload.target,
+            record_event=True,
+            db_path=store.get_db_path(),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 app.include_router(api_router)
 
 try:

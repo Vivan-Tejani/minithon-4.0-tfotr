@@ -156,14 +156,13 @@ def get_events(limit: int = 50, db_path: Optional[Path] = None) -> List[dict]:
         events = []
         for row in cur.fetchall():
             d = dict(row)
-            if d["detail_json"]:
+            if d.get("detail_json"):
                 try:
                     d["detail"] = json.loads(d["detail_json"])
                 except Exception:
                     d["detail"] = d["detail_json"]
             else:
                 d["detail"] = None
-            del d["detail_json"]
             events.append(d)
         return events
     finally:
