@@ -250,7 +250,7 @@ def build_graph(
                         id=f"cap_pw:{acct.id}#leak:{mem_id}",
                         label=f"Password leak from {mem_name} (shared group '{acct.password_group}')",
                         requires=(f"E_LEAK:{mem_id}",),
-                        fix_hints=(f"unique_pw:{acct.password_group}",),
+                        fix_hints=(f"unique_pw:{acct.password_group}",) if len(members) >= 2 else (),
                     )
                 )
         else:
@@ -324,7 +324,7 @@ def build_graph(
             hints: List[str] = []
             if acct.second_factor in ("none", "sms"):
                 hints.append(f"2fa:{acct.id}")
-            if acct.password_group:
+            if acct.password_group and len(group_members.get(acct.password_group, [])) >= 2:
                 hints.append(f"unique_pw:{acct.password_group}")
             m_label = (
                 "Password login"
@@ -411,7 +411,11 @@ def build_graph(
                     id=f"{acct.id}#phish",
                     label="Credential phishing attack",
                     requires=(f"E_PHISH:{acct.id}",),
-                    fix_hints=(f"2fa:{acct.id}",),
+                    fix_hints=(
+                        f"2fa:{acct.id}:hardware_key"
+                        if acct.second_factor == "authenticator"
+                        else f"2fa:{acct.id}",
+                    ),
                 )
             )
 

@@ -202,9 +202,9 @@ def find_account_dependents(account_id: str, accounts: List[Account]) -> List[st
             continue
         if target_rec in acct.recovery:
             dependents.append(f"{acct.id} (recovery)")
-        elif target_sso in acct.login_methods:
+        if target_sso in acct.login_methods:
             dependents.append(f"{acct.id} (sso)")
-        elif target_inbox in acct.permissions:
+        if target_inbox in acct.permissions:
             dependents.append(f"{acct.id} (permission)")
 
     return dependents

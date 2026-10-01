@@ -3,8 +3,16 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Ensure both backend directory and repo root are in sys.path
+_backend_dir = Path(__file__).resolve().parent.parent
+_repo_root = _backend_dir.parent
+for _p in (str(_backend_dir), str(_repo_root)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 from fastapi import FastAPI, APIRouter, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -246,165 +254,6 @@ def import_state(payload: dict):
     service.record_snapshot_with_metrics(label="Imported state", state=new_state)
     store.add_event(kind="import", title="Imported state from JSON", detail={})
     return new_state
-
-
-# Ghost Preview Endpoint (Ticket M3-06 / M1-07)
-class PreviewPayload(BaseModel):
-    op: str
-    account: Optional[Account] = None
-    fix_id: Optional[str] = None
-
-
-@api_router.post("/preview")
-def preview_change(payload: PreviewPayload):
-    curr_state = store.load_state()
-    before_analysis = service.analyze(curr_state)
-
-    candidate_state = copy.deepcopy(curr_state)
-    changed_account_id = None
-
-    if payload.op == "upsert_account":
-        if not payload.account:
-            raise HTTPException(status_code=422, detail="Missing account in upsert preview")
-        acct = payload.account
-        changed_account_id = acct.id
-        idx = next((i for i, a in enumerate(candidate_state.accounts) if a.id == acct.id), None)
-        if idx is not None:
-            candidate_state.accounts[idx] = acct
-        else:
-            candidate_state.accounts.append(acct)
-    elif payload.op == "apply_fix":
-        fid = payload.fix_id or ""
-        if fid == "sim_lock":
-            candidate_state.anchors.phone.sim_lock = True
-        elif fid == "device_lock":
-            candidate_state.anchors.phone.device_lock = True
-        elif fid.startswith("2fa:"):
-            target = fid.replace("2fa:", "")
-            for a in candidate_state.accounts:
-                if a.id == target:
-                    a.second_factor = "authenticator"
-                    changed_account_id = target
-        elif fid.startswith("rm_login:"):
-            parts = fid.split(":")
-            if len(parts) >= 3:
-                target = parts[1]
-                meth = parts[2]
-                for a in candidate_state.accounts:
-                    if a.id == target and meth in a.login_methods:
-                        a.login_methods.remove(meth)
-                        changed_account_id = target
-        elif fid.startswith("unique_pw:"):
-            grp = fid.replace("unique_pw:", "")
-            for a in candidate_state.accounts:
-                if a.password_group == grp:
-                    a.password_group = None
-
-    after_analysis = service.analyze(candidate_state, force_fresh=True)
-
-    score_before = before_analysis["score"]
-    score_after = after_analysis["score"]
-    d_el = round(after_analysis["el"] - before_analysis["el"], 2)
-
-    # Detect new paths
-    before_p = {a["id"]: a["p"] for a in before_analysis["accounts"]}
-    new_paths: List[dict] = []
-    for acct_after in after_analysis["accounts"]:
-        aid = acct_after["id"]
-        p_prev = before_p.get(aid, 0.0)
-        p_now = acct_after["p"]
-        if aid == changed_account_id or (p_now - p_prev > 0.05):
-            new_paths.extend(acct_after.get("top_paths", [])[:2])
-
-    # Build ghost view diff
-    before_node_ids = {n["id"] for n in before_analysis["graph"]["nodes"]}
-    before_edges = {(e["source"], e["target"]) for e in before_analysis["graph"]["edges"]}
-
-    ghost_nodes = []
-    for n in after_analysis["graph"]["nodes"]:
-        if n["id"] not in before_node_ids or n["id"] == changed_account_id:
-            ghost_nodes.append({**n, "ghost": True})
-        else:
-            ghost_nodes.append({**n, "ghost": False})
-
-    ghost_edges = []
-    for e in after_analysis["graph"]["edges"]:
-        pair = (e["source"], e["target"])
-        if pair not in before_edges or e["target"] == changed_account_id:
-            ghost_edges.append({**e, "ghost": True})
-        else:
-            ghost_edges.append({**e, "ghost": False})
-
-    return {
-        "score_before": score_before,
-        "score_after": score_after,
-        "d_el": d_el,
-        "new_paths": new_paths[:3],
-        "new_spofs": after_analysis["spofs"],
-        "ghost": {
-            "nodes": ghost_nodes,
-            "edges": ghost_edges,
-        },
-    }
-
-
-# Scenario Cascade Endpoint (Ticket M3-05 / M1-06)
-class ScenarioPayload(BaseModel):
-    kind: str
-    target: str
-
-
-@api_router.post("/scenario")
-def run_scenario(payload: ScenarioPayload):
-    state = store.load_state()
-    catalog = service.load_catalog()
-    graph = service.build_graph(state, catalog, state.settings)
-    base_m = service.analyze(state)
-
-    forced = set()
-    leaked_group = None
-
-    if payload.kind == "entry":
-        forced.add(payload.target)
-    elif payload.kind == "breach":
-        forced.add(f"E_LEAK:{payload.target}")
-        acct = next((a for a in state.accounts if a.id == payload.target), None)
-        if acct and acct.password_group:
-            leaked_group = acct.password_group
-            for other in state.accounts:
-                if other.password_group == leaked_group:
-                    forced.add(f"E_LEAK:{other.id}")
-    elif payload.kind == "compromise":
-        forced.add(f"ACC:{payload.target}")
-    else:
-        raise HTTPException(status_code=422, detail="Invalid scenario kind")
-
-    det_res = closure_det(graph, forced=forced)
-    cascade = cascade_rounds(det_res)
-    all_taken = [
-        nid.replace("ACC:", "")
-        for nid, h in det_res["hop"].items()
-        if h > 0 and nid.startswith("ACC:") and nid not in forced and f"ACC:{payload.target}" != nid
-    ]
-    falls = len(all_taken)
-
-    mc_forced = metrics(graph, state.settings, forced=forced)
-    el_delta = max(0.0, round(mc_forced["el"] - base_m["el"], 2))
-    score_during = mc_forced["score"]
-
-    return {
-        "scenario": {
-            "kind": payload.kind,
-            "target": payload.target,
-            "label": f"{payload.kind.capitalize()} scenario on {payload.target}",
-        },
-        "cascade": cascade,
-        "falls": falls,
-        "el_delta": el_delta,
-        "score_during": score_during,
-        "leaked_group": leaked_group,
-        "next_actions": [],
-    }
 
 
 app.include_router(api_router)

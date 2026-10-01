@@ -92,6 +92,11 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({ request, currentScore 
             </div>
           )}
         </div>
+      ) : previewMutation.isError ? (
+        <div className="flex items-center gap-2 text-xs text-amber-400 py-1 font-mono-code">
+          <TrendingDown className="w-4 h-4 text-amber-400" />
+          <span>Complete required account details to preview impact.</span>
+        </div>
       ) : (
         <div className="flex items-center gap-2 text-xs text-slate-400 py-1 font-mono-code">
           <TrendingDown className="w-4 h-4 text-cyan-400" />
