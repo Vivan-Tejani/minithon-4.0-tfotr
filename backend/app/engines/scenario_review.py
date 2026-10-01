@@ -6,9 +6,12 @@ import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from backend.app.data.loader import Account, CatalogEntry, Settings, State, load_catalog
+try:
+    from app.data.loader import Account, CatalogEntry, Settings, State, load_catalog
+except ImportError:
+    from backend.app.data.loader import Account, CatalogEntry, Settings, State, load_catalog
 
 DB_DIR = Path(__file__).resolve().parent.parent.parent / ".data"
 DB_PATH = DB_DIR / "chokepoint.db"
@@ -225,6 +228,7 @@ def run_review(
 
     # Map accounts and password groups
     accounts_by_id = {a.id: a for a in state.accounts}
+    _ = (cat_map, accounts_by_id)
     groups: dict[str, list[Account]] = {}
     for a in state.accounts:
         if a.password_group:
@@ -384,8 +388,12 @@ def closure_det(
 ) -> dict[str, Any]:
     """Deterministic closure per PRD §6 Engine 2a."""
     try:
-        from backend.app.engines.gate_builder import build_graph
-        from backend.app.engines.simulator import closure_det as sim_closure
+        try:
+            from app.engines.gate_builder import build_graph
+            from app.engines.simulator import closure_det as sim_closure
+        except ImportError:
+            from backend.app.engines.gate_builder import build_graph
+            from backend.app.engines.simulator import closure_det as sim_closure
         g = build_graph(state, catalog, state.settings)
         return sim_closure(g, forced)
     except Exception:
@@ -542,7 +550,10 @@ def run_scenario(
     db_path: Path = DB_PATH,
 ) -> dict[str, Any]:
     """Execute scenario simulation per PRD §6 Engine 4."""
-    from backend.app.engines.fix_planner import evaluate_state, plan
+    try:
+        from app.engines.fix_planner import evaluate_state, plan
+    except ImportError:
+        from backend.app.engines.fix_planner import evaluate_state, plan
 
     cat_map = catalog if catalog is not None else load_catalog()
     st = settings or state.settings
@@ -780,8 +791,12 @@ def compute_preview(
     settings: Settings | None = None,
 ) -> dict[str, Any]:
     """Compute counterfactual preview with ghost nodes and edges per PRD §6 & §7."""
-    from backend.app.engines.fix_planner import evaluate_state
-    from backend.app.engines.fix_library import apply_fix
+    try:
+        from app.engines.fix_planner import evaluate_state
+        from app.engines.fix_library import apply_fix
+    except ImportError:
+        from backend.app.engines.fix_planner import evaluate_state
+        from backend.app.engines.fix_library import apply_fix
 
     cat_map = catalog if catalog is not None else load_catalog()
     st = settings or state.settings
