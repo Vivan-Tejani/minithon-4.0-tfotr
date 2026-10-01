@@ -1,0 +1,355 @@
+{
+  "score": 41,
+  "el": 18.3,
+  "worst": 31.0,
+  "headline": "Your phone number alone can take over 9 of your 12 accounts.",
+  "accounts": [
+    {
+      "id": "amazon",
+      "name": "Amazon",
+      "p": 0.58,
+      "band": "high",
+      "impact": 10,
+      "why": "Amazon has a high takeover likelihood (58%). Easiest route: SIM swap → SMS OTP login. Reuses password group A with leaked forum. Biggest single reduction: Switch 2FA from SMS to Authenticator.",
+      "reasons": ["reuses password group A", "SMS login enabled", "recovery via Gmail"],
+      "top_paths": [
+        {
+          "entries": ["E_SIM"],
+          "steps": [
+            { "node": "E_SIM", "hop": 0, "via": "SIM Intercept / Swap" },
+            { "node": "amazon", "hop": 1, "via": "SMS OTP Login Method" }
+          ],
+          "likelihood": 0.10,
+          "band": "medium",
+          "cut_fix_id": "rm_login:amazon:sms_otp"
+        }
+      ]
+    },
+    {
+      "id": "upi",
+      "name": "PhonePe / UPI Banking",
+      "p": 0.65,
+      "band": "high",
+      "impact": 10,
+      "why": "PhonePe / UPI Banking has a high takeover likelihood (65%). Easiest route: SIM swap → SMS login. Crown jewel financial target. Biggest single reduction: Turn on SIM lock with carrier.",
+      "reasons": ["SMS OTP only login", "holds payment and financial data", "holds SMS permission"],
+      "top_paths": [
+        {
+          "entries": ["E_SIM"],
+          "steps": [
+            { "node": "E_SIM", "hop": 0, "via": "SIM Intercept" },
+            { "node": "upi", "hop": 1, "via": "Direct SMS OTP authentication" }
+          ],
+          "likelihood": 0.10,
+          "band": "medium",
+          "cut_fix_id": "sim_lock"
+        }
+      ]
+    },
+    {
+      "id": "gmail",
+      "name": "Google Workspace / Gmail",
+      "p": 0.45,
+      "band": "high",
+      "impact": 8,
+      "why": "Gmail has a high takeover likelihood (45%). Central recovery hub for 6 connected services. Easiest route: SIM swap → SMS reset code. Biggest single reduction: Upgrade 2FA to Hardware Security Key.",
+      "reasons": ["recovery via SMS OTP", "central SSO identity provider", "holds private inbox and contacts"],
+      "top_paths": [
+        {
+          "entries": ["E_SIM"],
+          "steps": [
+            { "node": "E_SIM", "hop": 0, "via": "SIM Intercept" },
+            { "node": "gmail", "hop": 1, "via": "SMS Password Reset Code" }
+          ],
+          "likelihood": 0.10,
+          "band": "medium",
+          "cut_fix_id": "2fa:gmail"
+        }
+      ]
+    },
+    {
+      "id": "dropbox",
+      "name": "Dropbox Cloud Vault",
+      "p": 0.41,
+      "band": "high",
+      "impact": 9,
+      "why": "Dropbox Cloud Vault has a high takeover likelihood (41%). Easiest route: Credential leak on Hotmail → Password reset via Hotmail inbox. Biggest single reduction: Switch 2FA from none to Authenticator.",
+      "reasons": ["recovery linked to stale Hotmail account", "no second factor enabled", "holds government ID & work records"],
+      "top_paths": [
+        {
+          "entries": ["E_LEAK:oldforum"],
+          "steps": [
+            { "node": "oldforum", "hop": 1, "via": "Group A Password Reuse" },
+            { "node": "hotmail", "hop": 2, "via": "Direct Credential Stuffing" },
+            { "node": "dropbox", "hop": 3, "via": "Recovery Email via Hotmail Inbox" }
+          ],
+          "likelihood": 0.21,
+          "band": "medium",
+          "cut_fix_id": "rm_recovery:dropbox:email:hotmail"
+        }
+      ]
+    },
+    {
+      "id": "photoedit",
+      "name": "AI Photo Studio Pro",
+      "p": 0.45,
+      "band": "high",
+      "impact": 6,
+      "why": "AI Photo Studio Pro has a high takeover likelihood (45%). Easiest route: Gmail compromise → SSO OAuth token hijacking. App holds dangerous full email inbox permission.",
+      "reasons": ["holds email_inbox:gmail permission", "SSO login via Gmail", "holds photo library access"],
+      "top_paths": [
+        {
+          "entries": ["E_SIM"],
+          "steps": [
+            { "node": "gmail", "hop": 1, "via": "SMS Reset" },
+            { "node": "photoedit", "hop": 2, "via": "Google OAuth SSO Token" }
+          ],
+          "likelihood": 0.10,
+          "band": "medium",
+          "cut_fix_id": "revoke:photoedit:email_inbox:gmail"
+        }
+      ]
+    },
+    {
+      "id": "instagram",
+      "name": "Instagram",
+      "p": 0.42,
+      "band": "high",
+      "impact": 6,
+      "why": "Instagram has a high takeover likelihood (42%). Easiest route: Gmail recovery reset OR Group B password leak. Biggest single reduction: Switch 2FA to Authenticator.",
+      "reasons": ["shares password group B with Canva", "SMS 2FA bypassable by SIM swap", "recovery via Gmail"],
+      "top_paths": [
+        {
+          "entries": ["E_SIM"],
+          "steps": [
+            { "node": "gmail", "hop": 1, "via": "SMS Reset" },
+            { "node": "instagram", "hop": 2, "via": "Password reset email sent to Gmail" }
+          ],
+          "likelihood": 0.10,
+          "band": "medium",
+          "cut_fix_id": "2fa:instagram"
+        }
+      ]
+    },
+    {
+      "id": "linkedin",
+      "name": "LinkedIn",
+      "p": 0.45,
+      "band": "high",
+      "impact": 5,
+      "why": "LinkedIn has a high takeover likelihood (45%). Easiest route: Google OAuth takeover. Downstream blast radius includes professional network & private messages.",
+      "reasons": ["direct Google SSO", "no independent second factor", "holds confidential work telemetry"],
+      "top_paths": [
+        {
+          "entries": ["E_SIM"],
+          "steps": [
+            { "node": "gmail", "hop": 1, "via": "SMS Reset" },
+            { "node": "linkedin", "hop": 2, "via": "Google SSO login" }
+          ],
+          "likelihood": 0.10,
+          "band": "medium",
+          "cut_fix_id": "2fa:gmail"
+        }
+      ]
+    },
+    {
+      "id": "zomato",
+      "name": "Zomato",
+      "p": 0.48,
+      "band": "high",
+      "impact": 3,
+      "why": "Zomato has a high takeover likelihood (48%). Easiest route: SIM swap OTP login. Exposes live delivery addresses and stored cards.",
+      "reasons": ["SMS OTP login only", "recovery via Gmail inbox"],
+      "top_paths": [
+        {
+          "entries": ["E_SIM"],
+          "steps": [
+            { "node": "E_SIM", "hop": 0, "via": "SIM Intercept" },
+            { "node": "zomato", "hop": 1, "via": "Direct phone OTP authentication" }
+          ],
+          "likelihood": 0.10,
+          "band": "medium",
+          "cut_fix_id": "sim_lock"
+        }
+      ]
+    },
+    {
+      "id": "netflix",
+      "name": "Netflix",
+      "p": 0.52,
+      "band": "high",
+      "impact": 1,
+      "why": "Netflix has a high takeover likelihood (52%). Weak gate: Reuses password group A and resets via Gmail. High exposure but low direct data severity.",
+      "reasons": ["reuses password group A", "no 2FA", "recovery via Gmail"],
+      "top_paths": [
+        {
+          "entries": ["E_LEAK:oldforum"],
+          "steps": [
+            { "node": "netflix", "hop": 1, "via": "Group A Password Leak Stuffing" }
+          ],
+          "likelihood": 0.21,
+          "band": "medium",
+          "cut_fix_id": "unique_pw:A"
+        }
+      ]
+    },
+    {
+      "id": "canva",
+      "name": "Canva",
+      "p": 0.45,
+      "band": "high",
+      "impact": 1,
+      "why": "Canva has a high takeover likelihood (45%). Downstream victim of Google SSO and Group B password sharing with Instagram.",
+      "reasons": ["shares password group B", "Google SSO bypass"],
+      "top_paths": [
+        {
+          "entries": ["E_SIM"],
+          "steps": [
+            { "node": "gmail", "hop": 1, "via": "SMS Reset" },
+            { "node": "canva", "hop": 2, "via": "Google SSO" }
+          ],
+          "likelihood": 0.10,
+          "band": "medium",
+          "cut_fix_id": "2fa:gmail"
+        }
+      ]
+    },
+    {
+      "id": "hotmail",
+      "name": "Microsoft Outlook / Hotmail",
+      "p": 0.38,
+      "band": "medium",
+      "impact": 5,
+      "why": "Hotmail has a medium takeover likelihood (38%). Inactive since March 2022 but acts as recovery anchor for Dropbox. Stuffer breach risk via Group A.",
+      "reasons": ["stale backup email", "reuses password group A", "recovery anchor for Dropbox Cloud Vault"],
+      "top_paths": [
+        {
+          "entries": ["E_LEAK:oldforum"],
+          "steps": [
+            { "node": "hotmail", "hop": 1, "via": "Group A credential reuse" }
+          ],
+          "likelihood": 0.21,
+          "band": "medium",
+          "cut_fix_id": "unique_pw:A"
+        }
+      ]
+    },
+    {
+      "id": "oldforum",
+      "name": "DevSec Enthusiast Forum",
+      "p": 0.38,
+      "band": "medium",
+      "impact": 1,
+      "why": "Old Forum has a medium takeover likelihood (38%). Unmaintained forum account from 2019 using Group A password. Vulnerable to historical credential dumps.",
+      "reasons": ["stale account (> 5 years inactive)", "password group A origin vector"],
+      "top_paths": [
+        {
+          "entries": ["E_LEAK:oldforum"],
+          "steps": [
+            { "node": "oldforum", "hop": 1, "via": "Direct database breach dump" }
+          ],
+          "likelihood": 0.21,
+          "band": "medium",
+          "cut_fix_id": "delete:oldforum"
+        }
+      ]
+    }
+  ],
+  "spofs": [
+    {
+      "id": "E_SIM",
+      "label": "Your phone number (SIM swap / carrier intercept)",
+      "kind": "entry",
+      "falls": 9,
+      "falls_ids": ["gmail", "amazon", "upi", "zomato", "netflix", "instagram", "linkedin", "canva", "photoedit"],
+      "d_el": 5.2
+    },
+    {
+      "id": "ACC:gmail",
+      "label": "Google Workspace / Gmail Account",
+      "kind": "account",
+      "falls": 7,
+      "falls_ids": ["amazon", "netflix", "zomato", "instagram", "linkedin", "canva", "photoedit"],
+      "d_el": 4.6
+    },
+    {
+      "id": "GROUP:A",
+      "label": "Shared Password Group 'A' (4 accounts)",
+      "kind": "group",
+      "falls": 5,
+      "falls_ids": ["netflix", "hotmail", "amazon", "oldforum", "dropbox"],
+      "d_el": 3.8
+    },
+    {
+      "id": "ACC:hotmail",
+      "label": "Microsoft Outlook / Hotmail Account",
+      "kind": "account",
+      "falls": 2,
+      "falls_ids": ["dropbox", "oldforum"],
+      "d_el": 2.1
+    },
+    {
+      "id": "E_PHONE",
+      "label": "Your phone (lost or stolen device)",
+      "kind": "entry",
+      "falls": 0,
+      "falls_ids": [],
+      "d_el": 0.0
+    }
+  ],
+  "crown_path": {
+    "target": "upi",
+    "path": {
+      "entries": ["E_SIM"],
+      "steps": [
+        { "node": "E_SIM", "hop": 0, "via": "SIM Intercept / Clone" },
+        { "node": "upi", "hop": 1, "via": "Direct SMS OTP Login" }
+      ],
+      "likelihood": 0.10,
+      "band": "medium",
+      "cut_fix_id": "sim_lock"
+    }
+  },
+  "graph": {
+    "nodes": [
+      { "id": "E_SIM", "label": "Phone Number (SIM)", "kind": "entry", "layer": 0, "p": 0.10, "band": "low", "impact": 10 },
+      { "id": "E_PHONE", "label": "Physical Phone Device", "kind": "entry", "layer": 0, "p": 0.20, "band": "medium", "impact": 10 },
+      { "id": "GROUP:A", "label": "Password Group 'A'", "kind": "group", "layer": 0, "p": 0.21, "band": "medium", "impact": 10 },
+      { "id": "GROUP:B", "label": "Password Group 'B'", "kind": "group", "layer": 0, "p": 0.15, "band": "medium", "impact": 6 },
+      { "id": "gmail", "label": "Gmail / Google", "kind": "account", "layer": 1, "p": 0.45, "band": "high", "impact": 8 },
+      { "id": "hotmail", "label": "Hotmail / Outlook", "kind": "account", "layer": 1, "p": 0.38, "band": "medium", "impact": 5 },
+      { "id": "photoedit", "label": "AI Photo Studio Pro", "kind": "account", "layer": 1, "p": 0.45, "band": "high", "impact": 6 },
+      { "id": "amazon", "label": "Amazon", "kind": "account", "layer": 2, "p": 0.58, "band": "high", "impact": 10 },
+      { "id": "upi", "label": "PhonePe / UPI Banking", "kind": "account", "layer": 2, "p": 0.65, "band": "high", "impact": 10 },
+      { "id": "netflix", "label": "Netflix", "kind": "account", "layer": 2, "p": 0.52, "band": "high", "impact": 1 },
+      { "id": "zomato", "label": "Zomato", "kind": "account", "layer": 2, "p": 0.48, "band": "high", "impact": 3 },
+      { "id": "instagram", "label": "Instagram", "kind": "account", "layer": 2, "p": 0.42, "band": "high", "impact": 6 },
+      { "id": "linkedin", "label": "LinkedIn", "kind": "account", "layer": 2, "p": 0.45, "band": "high", "impact": 5 },
+      { "id": "canva", "label": "Canva", "kind": "account", "layer": 2, "p": 0.45, "band": "high", "impact": 1 },
+      { "id": "dropbox", "label": "Dropbox Cloud", "kind": "account", "layer": 2, "p": 0.41, "band": "high", "impact": 9 },
+      { "id": "oldforum", "label": "DevSec Forum", "kind": "account", "layer": 2, "p": 0.38, "band": "medium", "impact": 1 }
+    ],
+    "edges": [
+      { "source": "E_SIM", "target": "gmail", "label": "Recovery SMS" },
+      { "source": "E_SIM", "target": "amazon", "label": "SMS OTP Login" },
+      { "source": "E_SIM", "target": "upi", "label": "SMS OTP Auth" },
+      { "source": "E_SIM", "target": "zomato", "label": "SMS OTP Login" },
+      { "source": "gmail", "target": "amazon", "label": "Recovery Email" },
+      { "source": "gmail", "target": "netflix", "label": "Recovery Email" },
+      { "source": "gmail", "target": "zomato", "label": "Recovery Email" },
+      { "source": "gmail", "target": "instagram", "label": "Recovery Email" },
+      { "source": "gmail", "target": "linkedin", "label": "Google SSO" },
+      { "source": "gmail", "target": "canva", "label": "Google SSO" },
+      { "source": "gmail", "target": "photoedit", "label": "Google SSO" },
+      { "source": "photoedit", "target": "gmail", "label": "Granted Inbox Access" },
+      { "source": "GROUP:A", "target": "amazon", "label": "Shared Password" },
+      { "source": "GROUP:A", "target": "netflix", "label": "Shared Password" },
+      { "source": "GROUP:A", "target": "hotmail", "label": "Shared Password" },
+      { "source": "GROUP:A", "target": "oldforum", "label": "Shared Password" },
+      { "source": "GROUP:B", "target": "instagram", "label": "Shared Password" },
+      { "source": "GROUP:B", "target": "canva", "label": "Shared Password" },
+      { "source": "hotmail", "target": "dropbox", "label": "Recovery Email" },
+      { "source": "hotmail", "target": "oldforum", "label": "Recovery Email" }
+    ]
+  }
+}

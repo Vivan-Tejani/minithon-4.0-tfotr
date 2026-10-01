@@ -1,0 +1,135 @@
+[
+  {
+    "_note": "breach counts are illustrative demo data",
+    "key": "gmail",
+    "name": "Google / Gmail",
+    "type": "email",
+    "login_methods_supported": ["password", "sms_otp"],
+    "second_factors_supported": ["sms", "authenticator", "hardware_key"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": ["contacts", "photos"],
+    "default_data_held": ["private_messages", "contacts", "photos"],
+    "breach_count_5y": 0
+  },
+  {
+    "key": "hotmail",
+    "name": "Microsoft Outlook / Hotmail",
+    "type": "email",
+    "login_methods_supported": ["password"],
+    "second_factors_supported": ["sms", "authenticator", "hardware_key"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": [],
+    "default_data_held": ["private_messages"],
+    "breach_count_5y": 1
+  },
+  {
+    "key": "amazon",
+    "name": "Amazon",
+    "type": "shopping",
+    "login_methods_supported": ["password", "sms_otp"],
+    "second_factors_supported": ["sms", "authenticator"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": ["contacts"],
+    "default_data_held": ["payment", "contacts"],
+    "breach_count_5y": 1
+  },
+  {
+    "key": "upi_app",
+    "name": "PhonePe / GPay UPI Banking",
+    "type": "payments",
+    "login_methods_supported": ["sms_otp"],
+    "second_factors_supported": ["sms"],
+    "recovery_bypasses_2fa": false,
+    "typical_permissions": ["sms", "contacts", "location"],
+    "default_data_held": ["payment", "financial_records"],
+    "breach_count_5y": 0
+  },
+  {
+    "key": "netflix",
+    "name": "Netflix",
+    "type": "entertainment",
+    "login_methods_supported": ["password"],
+    "second_factors_supported": ["sms"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": [],
+    "default_data_held": ["profile_only"],
+    "breach_count_5y": 0
+  },
+  {
+    "key": "zomato",
+    "name": "Zomato",
+    "type": "other",
+    "login_methods_supported": ["sms_otp"],
+    "second_factors_supported": ["sms"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": ["location"],
+    "default_data_held": ["location_history", "payment"],
+    "breach_count_5y": 2
+  },
+  {
+    "key": "instagram",
+    "name": "Instagram",
+    "type": "social",
+    "login_methods_supported": ["password"],
+    "second_factors_supported": ["sms", "authenticator"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": ["camera", "photos"],
+    "default_data_held": ["photos", "private_messages"],
+    "breach_count_5y": 1
+  },
+  {
+    "key": "linkedin",
+    "name": "LinkedIn",
+    "type": "professional",
+    "login_methods_supported": ["password", "sso"],
+    "second_factors_supported": ["sms", "authenticator"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": ["contacts"],
+    "default_data_held": ["work_data", "private_messages"],
+    "breach_count_5y": 1
+  },
+  {
+    "key": "canva",
+    "name": "Canva",
+    "type": "utility_app",
+    "login_methods_supported": ["password", "sso"],
+    "second_factors_supported": ["sms", "authenticator"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": [],
+    "default_data_held": ["profile_only"],
+    "breach_count_5y": 1
+  },
+  {
+    "key": "photo_editor_app",
+    "name": "AI Photo Studio Pro",
+    "type": "utility_app",
+    "login_methods_supported": ["sso"],
+    "second_factors_supported": ["none"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": ["photos", "email_inbox:gmail"],
+    "default_data_held": ["photos"],
+    "breach_count_5y": 0
+  },
+  {
+    "key": "dropbox",
+    "name": "Dropbox",
+    "type": "storage",
+    "login_methods_supported": ["password"],
+    "second_factors_supported": ["sms", "authenticator", "hardware_key"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": ["files"],
+    "default_data_held": ["government_id", "work_data"],
+    "breach_count_5y": 1
+  },
+  {
+    "key": "generic_forum",
+    "name": "Generic Forum / Community",
+    "type": "forum",
+    "login_methods_supported": ["password"],
+    "second_factors_supported": ["none"],
+    "recovery_bypasses_2fa": true,
+    "typical_permissions": [],
+    "default_data_held": ["profile_only"],
+    "breach_count_5y": 3
+  }
+]

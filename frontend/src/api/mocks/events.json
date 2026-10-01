@@ -1,0 +1,30 @@
+[
+  {
+    "id": 101,
+    "ts": "2026-10-01T09:00:00Z",
+    "kind": "audit",
+    "title": "System Audit Calculated",
+    "detail_json": "{\"score\":41,\"spofs\":5,\"reachability_sim\":9}"
+  },
+  {
+    "id": 100,
+    "ts": "2026-09-30T18:22:00Z",
+    "kind": "review",
+    "title": "Stale Account Flagged: DevSec Enthusiast Forum",
+    "detail_json": "{\"target\":\"oldforum\",\"reason\":\"inactive_since_2019\"}"
+  },
+  {
+    "id": 99,
+    "ts": "2026-09-28T11:20:00Z",
+    "kind": "persona",
+    "title": "Demo Persona Loaded",
+    "detail_json": "{\"accounts_loaded\":12,\"anchors\":{\"sim_lock\":false,\"device_lock\":true}}"
+  },
+  {
+    "id": 98,
+    "ts": "2026-09-22T16:45:00Z",
+    "kind": "fix_applied",
+    "title": "OAuth Token Revocation Logged",
+    "detail_json": "{\"score_before\":38,\"score_after\":41}"
+  }
+]

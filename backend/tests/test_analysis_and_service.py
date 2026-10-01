@@ -98,3 +98,32 @@ def test_export_import_roundtrip():
     analysis_res = client.get("/api/analysis")
     assert analysis_res.status_code == 200
     assert analysis_res.json()["score"] == 49
+
+
+def test_paths_endpoint_and_integration():
+    client.post("/api/seed/demo")
+
+    # 1. Valid account paths
+    paths_res = client.get("/api/paths/gmail")
+    assert paths_res.status_code == 200
+    paths_data = paths_res.json()
+    assert "paths" in paths_data
+    assert len(paths_data["paths"]) >= 1
+
+    # 2. Nonexistent account -> 404
+    bad_paths_res = client.get("/api/paths/nonexistent_account")
+    assert bad_paths_res.status_code == 404
+
+    # 3. /api/preview via app client
+    prev_res = client.post("/api/preview", json={"op": "apply_fix", "fix_id": "sim_lock"})
+    assert prev_res.status_code == 200
+    prev_data = prev_res.json()
+    assert prev_data["score_after"] > prev_data["score_before"]
+
+    # 4. /api/scenario via app client returns real next_actions
+    scen_res = client.post("/api/scenario", json={"kind": "entry", "target": "E_SIM"})
+    assert scen_res.status_code == 200
+    scen_data = scen_res.json()
+    assert scen_data["falls"] == 9
+    assert len(scen_data["next_actions"]) > 0
+

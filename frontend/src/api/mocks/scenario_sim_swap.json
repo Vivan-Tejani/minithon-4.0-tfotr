@@ -1,0 +1,76 @@
+{
+  "scenario": {
+    "kind": "entry",
+    "target": "E_SIM",
+    "label": "SIM Swap / Carrier Phone Number Interception"
+  },
+  "cascade": [
+    {
+      "round": 1,
+      "accounts": [
+        { "id": "gmail", "via": "SMS Password Reset Code" },
+        { "id": "amazon", "via": "SMS OTP Direct Login" },
+        { "id": "upi", "via": "SMS OTP Authentication" },
+        { "id": "zomato", "via": "SMS OTP Login" }
+      ]
+    },
+    {
+      "round": 2,
+      "accounts": [
+        { "id": "netflix", "via": "Password Reset Email via Gmail Inbox" },
+        { "id": "instagram", "via": "Password Reset Link via Gmail Inbox" },
+        { "id": "linkedin", "via": "Google SSO Authentication via Gmail" },
+        { "id": "canva", "via": "Google SSO Authentication via Gmail" },
+        { "id": "photoedit", "via": "Google OAuth Token via Compromised Gmail" }
+      ]
+    }
+  ],
+  "falls": 9,
+  "el_delta": 5.2,
+  "score_during": 5,
+  "leaked_group": null,
+  "next_actions": [
+    {
+      "id": "sim_lock",
+      "type": "sim_lock",
+      "title": "Turn on SIM lock (port-out PIN) with your carrier",
+      "target": "E_SIM",
+      "effort": "low",
+      "standalone_gain": 5.2,
+      "marginal_gain": 5.2,
+      "score_after": 58,
+      "rank": 1,
+      "in_best3": true,
+      "note": "Completely cuts this entire cascade at root origin.",
+      "why": "Enabling carrier port-out PIN prevents unauthorized SIM swapping and invalidates attacker interception."
+    },
+    {
+      "id": "rm_login:amazon:sms_otp",
+      "type": "rm_login",
+      "title": "Remove SMS OTP direct login from Amazon",
+      "target": "amazon",
+      "effort": "low",
+      "standalone_gain": 1.9,
+      "marginal_gain": 1.5,
+      "score_after": 62,
+      "rank": 2,
+      "in_best3": false,
+      "note": "Decouples Amazon from carrier vulnerability.",
+      "why": "Requires attacker to possess password instead of only SMS interception."
+    },
+    {
+      "id": "2fa:gmail",
+      "type": "2fa",
+      "title": "Upgrade Gmail 2FA to Hardware Key / Authenticator",
+      "target": "gmail",
+      "effort": "medium",
+      "standalone_gain": 3.8,
+      "marginal_gain": 2.1,
+      "score_after": 67,
+      "rank": 3,
+      "in_best3": false,
+      "note": "Prevents 5 round-2 accounts from falling if phone number is compromised.",
+      "why": "Blocks SMS recovery gate on the primary SSO provider."
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "score_before": 41,
+  "score_after": 37,
+  "d_el": 1.2,
+  "new_paths": [
+    {
+      "entries": ["E_SIM"],
+      "steps": [
+        { "node": "E_SIM", "hop": 0, "via": "SIM Intercept" },
+        { "node": "preview_account", "hop": 1, "via": "SMS Direct Recovery" }
+      ],
+      "likelihood": 0.10,
+      "band": "medium",
+      "cut_fix_id": "rm_recovery:preview_account:sms"
+    }
+  ],
+  "new_spofs": [
+    {
+      "id": "E_SIM",
+      "label": "Your phone number (SIM swap)",
+      "kind": "entry",
+      "falls": 10,
+      "falls_ids": ["gmail", "amazon", "upi", "zomato", "netflix", "instagram", "linkedin", "canva", "photoedit", "preview_account"],
+      "d_el": 6.4
+    }
+  ],
+  "ghost": {
+    "nodes": [
+      {
+        "id": "preview_account",
+        "label": "Draft Account (Preview)",
+        "kind": "account",
+        "layer": 2,
+        "p": 0.55,
+        "band": "high",
+        "impact": 7,
+        "ghost": true
+      }
+    ],
+    "edges": [
+      {
+        "source": "E_SIM",
+        "target": "preview_account",
+        "label": "SMS Recovery",
+        "ghost": true
+      },
+      {
+        "source": "gmail",
+        "target": "preview_account",
+        "label": "SSO Link",
+        "ghost": true
+      }
+    ]
+  }
+}
