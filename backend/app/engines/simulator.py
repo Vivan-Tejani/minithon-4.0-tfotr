@@ -430,7 +430,13 @@ def paths_into(
                 best_fix = h
 
         if not best_fix:
-            best_fix = "sim_lock" if "E_SIM" in entry_set else "device_lock"
+            if "E_SIM" in entry_set:
+                best_fix = "sim_lock"
+            elif "E_PHONE" in entry_set:
+                best_fix = "device_lock"
+            else:
+                clean_tgt = target_account_id.replace("ACC:", "")
+                best_fix = f"2fa:{clean_tgt}"
 
         paths.append({
             "entries": sorted(list(entry_set)),
@@ -564,20 +570,28 @@ def explain_account(*args, **kwargs) -> Any:
     top_paths = args[3] if len(args) > 3 else kwargs.get("top_paths", [])
     catalog = args[4] if len(args) > 4 else kwargs.get("catalog", None)
 
-    name = getattr(acct, "name", str(acct))
+    if isinstance(acct, dict):
+        name = acct.get("name", acct.get("id", "Account"))
+        pw_group = acct.get("password_group")
+        sec_factor = acct.get("second_factor", "none")
+        breach = acct.get("breach_flag", False)
+        perms = acct.get("permissions", [])
+    else:
+        name = getattr(acct, "name", getattr(acct, "id", str(acct)))
+        pw_group = getattr(acct, "password_group", None)
+        sec_factor = getattr(acct, "second_factor", "none")
+        breach = getattr(acct, "breach_flag", False)
+        perms = getattr(acct, "permissions", [])
+
     pct = int(round(p_val * 100))
     reasons: List[str] = []
 
-    pw_group = getattr(acct, "password_group", None)
     if pw_group:
         reasons.append(f"reuses password in group '{pw_group}'")
-    sec_factor = getattr(acct, "second_factor", "none")
     if sec_factor in ("none", "sms"):
         reasons.append(f"weak 2FA ({sec_factor})")
-    breach = getattr(acct, "breach_flag", False)
     if breach:
         reasons.append("credentials flagged in breach")
-    perms = getattr(acct, "permissions", [])
     for perm in perms:
         if perm in ("sms", "photos") or str(perm).startswith("email_inbox:"):
             reasons.append(f"permission '{perm}'")

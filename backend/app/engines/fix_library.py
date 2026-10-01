@@ -57,7 +57,12 @@ def generate_candidates(
     # 3. 2fa:<acct>
     for a in state.accounts:
         cat = cat_map.get(a.service_key)
-        supported = cat.second_factors_supported if cat else ["sms", "authenticator"]
+        if isinstance(cat, dict):
+            supported = cat.get("second_factors_supported", ["sms", "authenticator"])
+        elif cat:
+            supported = getattr(cat, "second_factors_supported", ["sms", "authenticator"])
+        else:
+            supported = ["sms", "authenticator"]
 
         if a.second_factor == "none":
             if "authenticator" in supported or "hardware_key" in supported:
@@ -236,7 +241,12 @@ def apply_fix(
         for a in new_state.accounts:
             if a.id == target_id:
                 cat = cat_map.get(a.service_key)
-                supported = cat.second_factors_supported if cat else ["sms", "authenticator"]
+                if isinstance(cat, dict):
+                    supported = cat.get("second_factors_supported", ["sms", "authenticator"])
+                elif cat:
+                    supported = getattr(cat, "second_factors_supported", ["sms", "authenticator"])
+                else:
+                    supported = ["sms", "authenticator"]
 
                 if target_level == "hardware_key":
                     if "hardware_key" in supported:
