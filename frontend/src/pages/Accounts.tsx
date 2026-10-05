@@ -8,13 +8,12 @@ import {
   useSelection,
   useSeedDemo,
 } from '../api/hooks'
-import { Card, Button, Chip, BandBadge, Drawer, Skeleton } from '../components/ui'
+import { Card, Button, BandBadge, Drawer, Skeleton } from '../components/ui'
 import { FiltersBar, type FiltersState } from '../components/FiltersBar'
 import { AccountForm } from '../components/AccountForm'
 import type { Account } from '../api/types'
 import {
   Plus,
-  Smartphone,
   Trash2,
   Edit3,
   ShieldAlert,
@@ -25,7 +24,7 @@ import {
 
 export const Accounts: React.FC = () => {
   useEffect(() => {
-    document.title = 'Accounts & Inventory | Chokepoint Auditor'
+    document.title = 'Accounts & inventory · Chokepoint'
   }, [])
 
   const {
@@ -100,97 +99,72 @@ export const Accounts: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header and Anchors Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Header and Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
         <div>
-          <h2 className="text-xl font-bold font-mono-code uppercase tracking-wide text-slate-100">
-            Account & App Inventory
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-zinc-50">
+            Accounts & inventory
+          </h1>
+          <p className="text-sm text-zinc-400 mt-1">
             Tracking credential reuse, recovery gates, and blast-radius vectors across {accounts.length} services.
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => {
-            setEditingAccount(null)
-            setIsFormOpen(true)
-          }}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          Add Account
-        </Button>
+        <div className="flex items-center gap-2">
+          {accounts.length === 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => seedMutation.mutate()}
+              disabled={seedMutation.isPending}
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+              Load demo persona
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditingAccount(null)
+              setIsFormOpen(true)
+            }}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Add account
+          </Button>
+        </div>
       </div>
 
       {/* Error Banner with Retry */}
       {(isStateError || isAnalysisError) && (
-        <div className="p-4 bg-red-950/40 border border-red-800 rounded-lg flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-red-200">Failed to load account inventory</p>
-              <p className="text-xs text-red-400/80">Unable to query /state or /analysis telemetry from the backend.</p>
+        <Card className="border-red-500/20 bg-red-500/5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-400">Failed to load inventory data</p>
+                <p className="text-xs text-zinc-400">Unable to query backend state or analysis.</p>
+              </div>
             </div>
-          </div>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => {
-              refetchState()
-              refetchAnalysis()
-            }}
-          >
-            Retry Telemetry
-          </Button>
-        </div>
-      )}
-
-      {/* Zero Accounts Empty State */}
-      {!isStateLoading && accounts.length === 0 && (
-        <Card>
-          <div className="py-10 px-4 text-center max-w-lg mx-auto">
-            <div className="w-12 h-12 rounded-full bg-cyan-950/80 border border-cyan-800/80 flex items-center justify-center mx-auto text-cyan-400 mb-4 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold font-mono-code text-slate-100">
-              No Accounts Registered in Inventory
-            </h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Your security auditor has no registered services yet. Load the canonical 12-account cybersecurity persona to immediately evaluate credential reuse cascades, or register your first service.
-            </p>
-            <div className="flex items-center justify-center gap-3 mt-6">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => seedMutation.mutate()}
-                disabled={seedMutation.isPending}
-                icon={<Sparkles className="w-4 h-4" />}
-              >
-                {seedMutation.isPending ? 'Seeding Persona...' : 'Load Demo Persona'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEditingAccount(null)
-                  setIsFormOpen(true)
-                }}
-                icon={<Plus className="w-4 h-4" />}
-              >
-                Add First Account
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                refetchState()
+                refetchAnalysis()
+              }}
+            >
+              Retry
+            </Button>
           </div>
         </Card>
       )}
 
       {/* Hardware & Anchor Baseline Card */}
       <Card
-        title="Hardware & Identity Anchors"
-        subtitle="Foundational device and SIM carrier barriers affecting all downstream gates"
-        action={<Smartphone className="w-4 h-4 text-cyan-400" />}
+        title="Hardware & identity anchors"
+        subtitle="Foundational device and carrier security controls"
       >
         {isStateLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -199,18 +173,22 @@ export const Accounts: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="p-3.5 bg-[#0a0f1d] border border-[#1c2638] rounded-lg flex items-center justify-between">
+            <div className="p-4 rounded-lg border border-zinc-800 bg-zinc-900/30 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-200">Carrier SIM Lock / Port-Out PIN</span>
+                  <span className="text-xs font-medium text-zinc-200">Carrier SIM lock / Port-out PIN</span>
                   {anchors.phone.sim_lock ? (
-                    <Chip variant="success" size="xs">ENABLED</Chip>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Enabled
+                    </span>
                   ) : (
-                    <Chip variant="danger" size="xs">VULNERABLE</Chip>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                      Vulnerable
+                    </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Multiplies SIM swap takeover probability by 0.25× across all SMS gates.
+                <p className="text-xs text-zinc-500 mt-1">
+                  Reduces SIM swap takeover probability across all SMS recovery gates.
                 </p>
               </div>
               <input
@@ -221,22 +199,26 @@ export const Accounts: React.FC = () => {
                     phone: { ...anchors.phone, sim_lock: e.target.checked },
                   })
                 }}
-                className="h-4 w-4 rounded bg-[#070b14] border-[#1c2638] text-cyan-500 cursor-pointer"
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 cursor-pointer accent-zinc-100"
               />
             </div>
 
-            <div className="p-3.5 bg-[#0a0f1d] border border-[#1c2638] rounded-lg flex items-center justify-between">
+            <div className="p-4 rounded-lg border border-zinc-800 bg-zinc-900/30 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-200">Device Lock / Biometrics</span>
+                  <span className="text-xs font-medium text-zinc-200">Device lock & biometrics</span>
                   {anchors.phone.device_lock ? (
-                    <Chip variant="success" size="xs">ACTIVE</Chip>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Active
+                    </span>
                   ) : (
-                    <Chip variant="danger" size="xs">DISABLED</Chip>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                      Disabled
+                    </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Blocks physical device access from granting SMS or Authenticator capabilities.
+                <p className="text-xs text-zinc-500 mt-1">
+                  Prevents physical access from granting SMS or Authenticator capabilities.
                 </p>
               </div>
               <input
@@ -247,7 +229,7 @@ export const Accounts: React.FC = () => {
                     phone: { ...anchors.phone, device_lock: e.target.checked },
                   })
                 }}
-                className="h-4 w-4 rounded bg-[#070b14] border-[#1c2638] text-cyan-500 cursor-pointer"
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 cursor-pointer accent-zinc-100"
               />
             </div>
           </div>
@@ -259,24 +241,24 @@ export const Accounts: React.FC = () => {
 
       {/* Accounts Inventory Table */}
       <Card
-        title={`Registered Accounts (${filteredAccounts.length} / ${accounts.length})`}
-        subtitle="Click any row to open full attack path and blast-radius telemetry"
+        title={`Registered accounts (${filteredAccounts.length} / ${accounts.length})`}
+        subtitle="Click any row to open credential details and blast-radius analysis"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-[#1c2638] text-slate-400 uppercase font-mono-code text-[11px]">
-                <th className="pb-3 pl-2">Account</th>
-                <th className="pb-3">Type</th>
-                <th className="pb-3">2FA Gate</th>
-                <th className="pb-3">Password Group</th>
-                <th className="pb-3">Audited Risk Band</th>
-                <th className="pb-3">Data / Access</th>
-                <th className="pb-3">Last Activity</th>
-                <th className="pb-3 text-right pr-2">Actions</th>
+              <tr className="border-b border-zinc-800 text-zinc-400">
+                <th className="pb-3 pl-2 font-medium">Account</th>
+                <th className="pb-3 font-medium">Type</th>
+                <th className="pb-3 font-medium">2FA gate</th>
+                <th className="pb-3 font-medium">Password group</th>
+                <th className="pb-3 font-medium">Risk status</th>
+                <th className="pb-3 font-medium">Data stored</th>
+                <th className="pb-3 font-medium">Last activity</th>
+                <th className="pb-3 text-right pr-2 font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1c2638]/50">
+            <tbody className="divide-y divide-zinc-800/60">
               {isStateLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
@@ -292,7 +274,7 @@ export const Accounts: React.FC = () => {
                 ))
               ) : filteredAccounts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500 font-mono-code">
+                  <td colSpan={8} className="py-8 text-center text-zinc-500">
                     {accounts.length === 0 ? (
                       'No accounts in inventory.'
                     ) : (
@@ -312,9 +294,9 @@ export const Accounts: React.FC = () => {
                               fallsIfCompromised: 'all',
                             })
                           }
-                          icon={<RotateCcw className="w-3 h-3" />}
                         >
-                          Reset Filters
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Reset filters
                         </Button>
                       </div>
                     )}
@@ -322,104 +304,108 @@ export const Accounts: React.FC = () => {
                 </tr>
               ) : (
                 filteredAccounts.map((acct) => {
-                const an = analysisMap.get(acct.id)
-                return (
-                  <tr
-                    key={acct.id}
-                    onClick={() => openAccountDetail(acct.id)}
-                    className="hover:bg-[#111728] transition-colors cursor-pointer group"
-                  >
-                    <td className="py-3 pl-2 font-medium text-slate-100 flex items-center gap-2">
-                      <span>{acct.name}</span>
-                      {acct.breach_flag && (
-                        <ShieldAlert className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-                      )}
-                    </td>
-
-                    <td className="py-3 text-slate-400 font-mono-code">{acct.type}</td>
-
-                    <td className="py-3 font-mono-code">
-                      <span
-                        className={
-                          acct.second_factor === 'none'
-                            ? 'text-red-400 font-semibold'
-                            : 'text-slate-300'
-                        }
-                      >
-                        {acct.second_factor}
-                      </span>
-                    </td>
-
-                    <td className="py-3 font-mono-code">
-                      {acct.password_group ? (
-                        <Chip variant="warning" size="xs">
-                          Group {acct.password_group}
-                        </Chip>
-                      ) : (
-                        <span className="text-slate-500 italic">Unique</span>
-                      )}
-                    </td>
-
-                    <td className="py-3">
-                      {an ? (
-                        <BandBadge band={an.band} probability={an.p} size="sm" />
-                      ) : (
-                        <span className="text-slate-600">--</span>
-                      )}
-                    </td>
-
-                    <td className="py-3">
-                      <div className="flex flex-wrap gap-1 max-w-xs">
-                        {acct.data_held.slice(0, 2).map((d) => (
-                          <Chip key={d} size="xs" variant="default">
-                            {d}
-                          </Chip>
-                        ))}
-                        {acct.data_held.length > 2 && (
-                          <span className="text-[10px] text-slate-500 font-mono-code">
-                            +{acct.data_held.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    <td className="py-3 font-mono-code text-slate-400">
-                      {acct.last_activity}
-                    </td>
-
-                    <td
-                      className="py-3 text-right pr-2 space-x-1"
-                      onClick={(e) => e.stopPropagation()}
+                  const an = analysisMap.get(acct.id)
+                  return (
+                    <tr
+                      key={acct.id}
+                      onClick={() => openAccountDetail(acct.id)}
+                      className="hover:bg-zinc-800/40 transition-colors cursor-pointer group"
                     >
-                      <button
-                        onClick={() => {
-                          setEditingAccount(acct)
-                          setIsFormOpen(true)
-                        }}
-                        className="p-1 hover:text-cyan-400 text-slate-400 rounded transition-colors"
-                        title="Edit Account"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete account ${acct.name}?`)) {
-                            deleteAccountMutation.mutate(acct.id, {
-                              onError: (err: any) => {
-                                alert(err?.message || `Cannot delete ${acct.name}: other accounts depend on it.`)
-                              },
-                            })
+                      <td className="py-3 pl-2 font-medium text-zinc-200 flex items-center gap-2">
+                        <span>{acct.name}</span>
+                        {acct.breach_flag && (
+                          <ShieldAlert className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                        )}
+                      </td>
+
+                      <td className="py-3 text-zinc-400">{acct.type}</td>
+
+                      <td className="py-3">
+                        <span
+                          className={
+                            acct.second_factor === 'none'
+                              ? 'text-red-400 font-medium'
+                              : 'text-zinc-300'
                           }
-                        }}
-                        className="p-1 hover:text-red-400 text-slate-400 rounded transition-colors"
-                        title="Delete Account"
+                        >
+                          {acct.second_factor}
+                        </span>
+                      </td>
+
+                      <td className="py-3">
+                        {acct.password_group ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400">
+                            Group {acct.password_group}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-500">Unique</span>
+                        )}
+                      </td>
+
+                      <td className="py-3">
+                        {an ? (
+                          <BandBadge band={an.band} probability={an.p} size="sm" />
+                        ) : (
+                          <span className="text-zinc-500">--</span>
+                        )}
+                      </td>
+
+                      <td className="py-3">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {acct.data_held.slice(0, 2).map((d) => (
+                            <span
+                              key={d}
+                              className="text-[11px] px-2 py-0.5 rounded-full border border-zinc-800 bg-zinc-900 text-zinc-400"
+                            >
+                              {d}
+                            </span>
+                          ))}
+                          {acct.data_held.length > 2 && (
+                            <span className="text-[11px] text-zinc-500">
+                              +{acct.data_held.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3 text-zinc-400 font-mono-code text-[11px]">
+                        {acct.last_activity}
+                      </td>
+
+                      <td
+                        className="py-3 text-right pr-2 space-x-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              }))}
+                        <button
+                          onClick={() => {
+                            setEditingAccount(acct)
+                            setIsFormOpen(true)
+                          }}
+                          className="p-1 hover:text-zinc-100 text-zinc-400 rounded transition-colors"
+                          title="Edit account"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete account ${acct.name}?`)) {
+                              deleteAccountMutation.mutate(acct.id, {
+                                onError: (err: any) => {
+                                  alert(err?.message || `Cannot delete ${acct.name}: other accounts depend on it.`)
+                                },
+                              })
+                            }
+                          }}
+                          className="p-1 hover:text-red-400 text-zinc-400 rounded transition-colors"
+                          title="Delete account"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -432,7 +418,7 @@ export const Accounts: React.FC = () => {
           setIsFormOpen(false)
           setEditingAccount(null)
         }}
-        title={editingAccount ? `Edit ${editingAccount.name}` : 'Add New Account'}
+        title={editingAccount ? `Edit ${editingAccount.name}` : 'Add new account'}
         subtitle="Configure login methods, 2FA, and recovery routes"
         width="lg"
       >

@@ -110,11 +110,8 @@ export function isUsingMock(endpointKey: string): boolean {
 
   if (endpointOverrides[endpointKey]) return false
 
-  // In production builds, default to real API unless explicitly overridden by VITE_USE_MOCK === 'true'
-  if (import.meta.env.PROD) {
-    return import.meta.env.VITE_USE_MOCK === 'true'
-  }
-  return import.meta.env.VITE_USE_MOCK !== 'false'
+  // Default to real API unless explicitly overridden by VITE_USE_MOCK === 'true'
+  return import.meta.env.VITE_USE_MOCK === 'true'
 }
 
 export function isMasterMockEnabled(): boolean {
@@ -124,10 +121,7 @@ export function isMasterMockEnabled(): boolean {
   } catch {
     // fallback
   }
-  if (import.meta.env.PROD) {
-    return import.meta.env.VITE_USE_MOCK === 'true'
-  }
-  return import.meta.env.VITE_USE_MOCK !== 'false'
+  return import.meta.env.VITE_USE_MOCK === 'true'
 }
 
 export function setMasterMock(useMock: boolean): void {

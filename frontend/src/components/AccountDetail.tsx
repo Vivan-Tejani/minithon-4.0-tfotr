@@ -1,7 +1,6 @@
 import React from 'react'
 import { useSelection, useAnalysis, useApplyFix } from '../api/hooks'
-import { Drawer, BandBadge, Chip, Button } from './ui'
-import { Shield, Key, AlertTriangle, CornerDownRight } from 'lucide-react'
+import { Drawer, BandBadge, Button } from './ui'
 
 export interface AccountDetailProps {
   accountId?: string | null
@@ -26,8 +25,8 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({
 
   if (!account) {
     return (
-      <Drawer isOpen={isOpen} onClose={handleClose} title="Account Details" width="md">
-        <p className="text-slate-400">Select an account to view vulnerability telemetry.</p>
+      <Drawer isOpen={isOpen} onClose={handleClose} title="Account details" width="md">
+        <p className="text-zinc-500 text-xs">Select an account to view vulnerability telemetry.</p>
       </Drawer>
     )
   }
@@ -37,44 +36,47 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       title={account.name}
-      subtitle={`Account Key: ${account.id}`}
+      subtitle={`Account key: ${account.id}`}
       width="md"
     >
       <div className="space-y-6">
         {/* Risk & Impact Header */}
-        <div className="flex items-center justify-between p-3.5 bg-[#111728] border border-[#1e2a42] rounded-lg">
+        <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-lg">
           <div className="flex items-center gap-3">
             <BandBadge band={account.band} probability={account.p} size="md" />
-            <span className="text-xs text-slate-400 font-mono-code">
-              Impact: <strong className="text-slate-100">{account.impact}/10</strong>
+            <span className="text-xs text-zinc-400">
+              Impact: <strong className="text-zinc-100 font-normal">{account.impact}/10</strong>
             </span>
           </div>
-          <span className="text-xs font-mono-code text-cyan-400">
-            P = {Math.round(account.p * 100)}%
+          <span className="text-xs font-mono-code text-zinc-300">
+            {Math.round(account.p * 100)}% takeover likelihood
           </span>
         </div>
 
         {/* Narrative Explanation */}
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-cyan-400" /> Vulnerability Diagnostic
+        <div className="space-y-1.5">
+          <h4 className="text-xs font-medium text-zinc-400">
+            Diagnostic summary
           </h4>
-          <p className="text-xs text-slate-200 bg-[#0d1320] border border-[#1c2638] p-3 rounded-lg leading-relaxed font-mono-code">
+          <p className="text-xs text-zinc-300 bg-zinc-900 border border-zinc-800 p-3 rounded-lg leading-relaxed">
             {account.why}
           </p>
         </div>
 
         {/* Contributing Factors */}
         {account.reasons && account.reasons.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Contributing Attack Vectors
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium text-zinc-400">
+              Contributing vectors
             </h4>
             <div className="flex flex-wrap gap-1.5">
               {account.reasons.map((r, i) => (
-                <Chip key={i} variant="warning" size="sm">
+                <span
+                  key={i}
+                  className="text-xs px-2.5 py-0.5 rounded-full border border-zinc-800 bg-zinc-900 text-zinc-300"
+                >
                   {r}
-                </Chip>
+                </span>
               ))}
             </div>
           </div>
@@ -82,50 +84,49 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({
 
         {/* Attack Paths */}
         {account.top_paths && account.top_paths.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-              <CornerDownRight className="w-3.5 h-3.5 text-red-400" /> Top Takeover Paths
+          <div className="space-y-3">
+            <h4 className="text-xs font-medium text-zinc-400">
+              Attack trajectories
             </h4>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {account.top_paths.map((path, idx) => (
                 <div
                   key={idx}
-                  className="p-3 bg-[#0a0f1d] border border-red-950/70 rounded-lg space-y-2.5"
+                  className="p-3 bg-zinc-900/40 border border-zinc-800 rounded-lg space-y-2.5"
                 >
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono-code font-bold text-red-300">
+                    <span className="font-medium text-zinc-200">
                       Route #{idx + 1}
                     </span>
-                    <span className="font-mono-code text-[11px] text-slate-400">
-                      Solo Likelihood: {Math.round(path.likelihood * 100)}%
+                    <span className="font-mono-code text-[11px] text-zinc-500">
+                      Likelihood: {Math.round(path.likelihood * 100)}%
                     </span>
                   </div>
 
-                  <div className="space-y-1.5 pl-2 border-l border-red-900/50">
+                  <div className="space-y-1 pl-2 border-l border-zinc-700">
                     {path.steps.map((step, sIdx) => (
-                      <div key={sIdx} className="text-xs flex items-center gap-2">
-                        <span className="font-mono-code text-cyan-400 text-[10px]">
+                      <div key={sIdx} className="text-xs flex items-center gap-2 text-zinc-300">
+                        <span className="font-mono-code text-zinc-500 text-[10px]">
                           [H{step.hop}]
                         </span>
-                        <span className="text-slate-200 font-semibold">{step.node}</span>
-                        <span className="text-slate-500">via</span>
-                        <span className="text-slate-300 italic text-[11px]">{step.via}</span>
+                        <span className="text-zinc-100">{step.node}</span>
+                        <span className="text-zinc-500">→</span>
+                        <span className="text-zinc-400">{step.via}</span>
                       </div>
                     ))}
                   </div>
 
                   {path.cut_fix_id && (
-                    <div className="pt-2 border-t border-[#1c2638] flex items-center justify-between">
-                      <span className="text-[11px] font-mono-code text-slate-400 flex items-center gap-1">
-                        <Key className="w-3 h-3 text-cyan-400" /> Recommended Cut:
+                    <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
+                      <span className="text-xs text-zinc-400">
+                        Remediation: <span className="font-mono-code text-zinc-200">{path.cut_fix_id}</span>
                       </span>
                       <Button
-                        variant="primary"
                         size="xs"
                         loading={applyFixMutation.isPending}
                         onClick={() => applyFixMutation.mutate(path.cut_fix_id)}
                       >
-                        Apply Cut Fix
+                        Apply fix
                       </Button>
                     </div>
                   )}

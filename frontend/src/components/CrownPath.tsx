@@ -1,7 +1,7 @@
 import React from 'react'
 import type { Path } from '../api/types'
 import { Card, Button, BandBadge } from './ui'
-import { Crown, Key, CornerDownRight } from 'lucide-react'
+import { CornerDownRight } from 'lucide-react'
 
 export interface CrownPathProps {
   crown: {
@@ -15,8 +15,8 @@ export interface CrownPathProps {
 export const CrownPath: React.FC<CrownPathProps> = ({ crown, onFixClick, loadingFix = false }) => {
   if (!crown) {
     return (
-      <Card title="Crown Jewel Protection" subtitle="Target with maximum security impact">
-        <p className="text-xs text-slate-400">No crown jewel target currently designated.</p>
+      <Card title="Crown jewel protection" subtitle="Designated high-value target assets">
+        <p className="text-xs text-zinc-500">No crown jewel target currently designated.</p>
       </Card>
     )
   }
@@ -25,32 +25,30 @@ export const CrownPath: React.FC<CrownPathProps> = ({ crown, onFixClick, loading
 
   return (
     <Card
-      title="Crown Jewel Infiltration Path"
-      subtitle={`Easiest route an attacker takes to compromise ${target.toUpperCase()}`}
-      action={<Crown className="w-4 h-4 text-amber-400" />}
-      variant="elevated"
+      title="Crown jewel path"
+      subtitle={`Shortest attack route to compromise ${target}`}
     >
       <div className="space-y-4">
-        <div className="flex items-center justify-between text-xs p-2.5 bg-[#0a0f1d] border border-[#1e2a42] rounded-lg">
+        <div className="flex items-center justify-between text-xs p-3 bg-zinc-900/60 border border-zinc-800 rounded-lg">
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Target Asset:</span>
-            <span className="font-mono-code font-bold text-slate-100 uppercase">{target}</span>
+            <span className="text-zinc-400">Target</span>
+            <span className="font-medium text-zinc-100">{target}</span>
           </div>
           <BandBadge band={path.band} probability={path.likelihood} size="sm" />
         </div>
 
         {/* Steps */}
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            Attack Trajectory:
+          <p className="text-xs font-medium text-zinc-400">
+            Attack trajectory
           </p>
-          <div className="space-y-1.5 pl-3 border-l-2 border-amber-500/50">
+          <div className="space-y-1.5 pl-3 border-l border-zinc-700">
             {path.steps.map((step, idx) => (
-              <div key={idx} className="text-xs flex items-center gap-2">
-                <CornerDownRight className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                <span className="font-mono-code text-cyan-300 font-semibold">{step.node}</span>
-                <span className="text-slate-500 text-[11px]">→</span>
-                <span className="text-slate-300 italic text-[11px]">{step.via}</span>
+              <div key={idx} className="text-xs flex items-center gap-2 text-zinc-300">
+                <CornerDownRight className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
+                <span className="font-mono-code text-zinc-100">{step.node}</span>
+                <span className="text-zinc-500">→</span>
+                <span className="text-zinc-400">{step.via}</span>
               </div>
             ))}
           </div>
@@ -58,19 +56,17 @@ export const CrownPath: React.FC<CrownPathProps> = ({ crown, onFixClick, loading
 
         {/* Cut Fix */}
         {path.cut_fix_id && (
-          <div className="pt-3 border-t border-[#1c2638] flex items-center justify-between gap-3">
+          <div className="pt-3 border-t border-zinc-800 flex items-center justify-between gap-3">
             <div>
-              <span className="text-[11px] font-mono-code text-slate-400 block">Single Action Cut:</span>
-              <span className="text-xs font-mono-code text-cyan-400 font-semibold">{path.cut_fix_id}</span>
+              <span className="text-xs text-zinc-400 block">Remediation action</span>
+              <span className="text-xs font-mono-code text-zinc-200">{path.cut_fix_id}</span>
             </div>
             <Button
-              variant="primary"
               size="sm"
               loading={loadingFix}
               onClick={() => onFixClick?.(path.cut_fix_id)}
-              icon={<Key className="w-3.5 h-3.5" />}
             >
-              Remediate Route
+              Remediate route
             </Button>
           </div>
         )}

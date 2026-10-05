@@ -78,25 +78,28 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
         {toasts.map((toast) => {
-          const typeStyles = {
-            success: 'bg-emerald-950/90 border-emerald-700/80 text-emerald-200',
-            error: 'bg-red-950/90 border-red-700/80 text-red-200',
-            warning: 'bg-amber-950/90 border-amber-700/80 text-amber-200',
-            info: 'bg-[#131b2e]/90 border-[#222e47] text-slate-200',
+          const indicatorStyles = {
+            success: 'bg-emerald-500',
+            error: 'bg-red-500',
+            warning: 'bg-amber-500',
+            info: 'bg-zinc-400',
           }[toast.type]
 
           return (
             <div
               key={toast.id}
-              className={`p-3.5 rounded-lg border shadow-xl backdrop-blur-md pointer-events-auto transition-all transform translate-y-0 opacity-100 flex items-start justify-between gap-3 ${typeStyles}`}
+              className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/95 text-zinc-100 shadow-xl backdrop-blur-md pointer-events-auto transition-all transform translate-y-0 opacity-100 flex items-start justify-between gap-3"
             >
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide">{toast.title}</p>
-                {toast.message && <p className="text-xs mt-0.5 opacity-90">{toast.message}</p>}
+              <div className="flex items-start gap-2.5">
+                <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${indicatorStyles}`} />
+                <div>
+                  <p className="text-sm font-medium text-zinc-100">{toast.title}</p>
+                  {toast.message && <p className="text-xs mt-1 text-zinc-400 leading-relaxed">{toast.message}</p>}
+                </div>
               </div>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="text-xs opacity-60 hover:opacity-100 p-0.5"
+                className="text-zinc-400 hover:text-zinc-100 p-0.5 rounded transition-colors"
                 aria-label="Close"
               >
                 ×

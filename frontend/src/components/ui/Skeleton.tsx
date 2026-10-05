@@ -17,7 +17,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
   return (
     <div
-      className={`animate-pulse bg-[#162035]/60 border border-[#1e2a42]/40 ${variantStyles} ${className}`}
+      className={`animate-pulse bg-zinc-800/60 rounded-md ${variantStyles} ${className}`}
       {...props}
     />
   )

@@ -113,25 +113,25 @@ export const EndpointDrawer: React.FC<EndpointDrawerProps> = ({ isOpen, onClose 
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title="Data Layer & Endpoint Router"
-      subtitle="Per-endpoint live API / mock simulation toggle matrix (M4-03)"
+      title="Data layer & endpoint router"
+      subtitle="Per-endpoint live API and mock simulation toggle matrix"
       width="lg"
     >
-      <div className="space-y-6 text-slate-200">
+      <div className="space-y-6 text-zinc-200">
         {/* Backend Status Telemetry */}
-        <div className="p-4 rounded-lg bg-[#0d131f] border border-[#1d273a] flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Server className="w-5 h-5 text-cyan-400" />
+            <Server className="w-4 h-4 text-zinc-400" />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono-code text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Backend API Status
+                <span className="text-sm font-medium text-zinc-200">
+                  Backend API status
                 </span>
-                <span className="text-[11px] font-mono-code text-slate-500">
+                <span className="text-xs font-mono text-zinc-500">
                   (http://localhost:8000)
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-zinc-400 mt-0.5">
                 {isHealthLoading
                   ? 'Pinging server health probe...'
                   : isBackendOnline
@@ -142,25 +142,25 @@ export const EndpointDrawer: React.FC<EndpointDrawerProps> = ({ isOpen, onClose 
           </div>
           <div className="flex items-center gap-2">
             <span
-              className={`px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase flex items-center gap-1.5 ${
+              className={`px-2.5 py-0.5 rounded-full text-xs font-medium flex items-center gap-1.5 ${
                 isBackendOnline
-                  ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800'
-                  : 'bg-red-950/80 text-red-400 border border-red-800'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
               }`}
             >
               {isBackendOnline ? (
                 <>
-                  <CheckCircle2 className="w-3 h-3" /> ONLINE
+                  <CheckCircle2 className="w-3 h-3" /> Online
                 </>
               ) : (
                 <>
-                  <XCircle className="w-3 h-3" /> OFFLINE
+                  <XCircle className="w-3 h-3" /> Offline
                 </>
               )}
             </span>
             <button
               onClick={() => checkHealth()}
-              className="p-1 rounded bg-[#131b2e] hover:bg-[#1c2742] text-slate-400 hover:text-slate-200 border border-[#222e47] transition-all cursor-pointer"
+              className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 border border-zinc-700/60 transition-colors cursor-pointer"
               title="Ping backend"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -169,48 +169,48 @@ export const EndpointDrawer: React.FC<EndpointDrawerProps> = ({ isOpen, onClose 
         </div>
 
         {/* Master Toggle Controls */}
-        <div className="p-4 rounded-lg bg-[#0d131f] border border-[#1d273a] space-y-3">
+        <div className="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-200">
-                Master Data Routing
+              <Sliders className="w-4 h-4 text-zinc-400" />
+              <span className="text-sm font-medium text-zinc-200">
+                Master data routing
               </span>
             </div>
-            <div className="flex items-center gap-1.5 bg-[#080c14] p-1 rounded border border-[#1e2a40]">
+            <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
               <button
                 onClick={() => handleToggleMasterMock(true)}
-                className={`px-3 py-1 rounded text-xs font-mono-code transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   masterMock
-                    ? 'bg-amber-950/70 text-amber-300 border border-amber-700/80 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                MOCK DATASET
+                Mock dataset
               </button>
               <button
                 onClick={() => handleToggleMasterMock(false)}
-                className={`px-3 py-1 rounded text-xs font-mono-code transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   !masterMock
-                    ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-700/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-zinc-100 text-zinc-900 shadow-sm font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                LIVE FASTAPI
+                Live FastAPI
               </button>
             </div>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            When Master is set to <strong className="text-amber-300">Mock</strong>, all endpoints default to deterministic PRD §9 persona fixtures unless selectively forced live below.
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            When Master is set to <strong className="text-zinc-200 font-medium">Mock</strong>, all endpoints default to deterministic PRD persona fixtures unless selectively forced live below.
           </p>
         </div>
 
         {/* Persona Management & Reset */}
-        <div className="p-4 rounded-lg bg-[#0d131f] border border-[#1d273a] space-y-3">
+        <div className="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800 space-y-3">
           <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-200">
-              State & Persona Controls
+            <Database className="w-4 h-4 text-zinc-400" />
+            <span className="text-sm font-medium text-zinc-200">
+              State & persona controls
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -221,18 +221,18 @@ export const EndpointDrawer: React.FC<EndpointDrawerProps> = ({ isOpen, onClose 
               disabled={seedMutation.isPending}
               className="flex items-center justify-center gap-2"
             >
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{seedMutation.isPending ? 'Seeding...' : 'Load Demo Persona (12 Accts)'}</span>
+              <Sparkles className="w-3.5 h-3.5 text-zinc-400" />
+              <span>{seedMutation.isPending ? 'Seeding...' : 'Load demo persona (12 accounts)'}</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleResetEmpty}
               disabled={resetMutation.isPending}
-              className="flex items-center justify-center gap-2 border-red-900/60 hover:border-red-700 text-red-300"
+              className="flex items-center justify-center gap-2 border-red-500/20 hover:border-red-500/40 text-red-400 hover:text-red-300 hover:bg-red-500/10"
             >
               <RotateCcw className="w-3.5 h-3.5 text-red-400" />
-              <span>{resetMutation.isPending ? 'Resetting...' : 'Reset to Empty Inventory'}</span>
+              <span>{resetMutation.isPending ? 'Resetting...' : 'Reset to empty inventory'}</span>
             </Button>
           </div>
         </div>
@@ -241,17 +241,17 @@ export const EndpointDrawer: React.FC<EndpointDrawerProps> = ({ isOpen, onClose 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Radio className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Per-Endpoint Switch Matrix
+              <Radio className="w-4 h-4 text-zinc-400" />
+              <h3 className="text-sm font-medium text-zinc-200">
+                Per-endpoint switch matrix
               </h3>
             </div>
-            <span className="text-[11px] font-mono-code text-slate-400">
-              15 Active Contract Shapes
+            <span className="text-xs font-mono text-zinc-500">
+              15 active contract shapes
             </span>
           </div>
 
-          <div className="border border-[#1d273a] rounded-lg divide-y divide-[#182236] bg-[#090e1a] max-h-96 overflow-y-auto font-mono-code text-xs">
+          <div className="border border-zinc-800 rounded-xl divide-y divide-zinc-800/70 bg-zinc-950/60 max-h-96 overflow-y-auto text-xs">
             {ENDPOINTS.map((ep) => {
               const activeMock = isUsingMock(ep.key)
               const forcedReal = Boolean(overrides[ep.key])
@@ -259,39 +259,39 @@ export const EndpointDrawer: React.FC<EndpointDrawerProps> = ({ isOpen, onClose 
               return (
                 <div
                   key={ep.key}
-                  className="p-3 flex items-center justify-between hover:bg-[#0e1627] transition-colors"
+                  className="p-3 flex items-center justify-between hover:bg-zinc-900/50 transition-colors"
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-200">{ep.name}</span>
-                      <Chip variant="default" size="sm" className="text-[9px] py-0 px-1.5">
+                      <span className="font-medium text-zinc-200">{ep.name}</span>
+                      <Chip variant="default" size="xs">
                         {ep.owner}
                       </Chip>
                     </div>
-                    <div className="text-[11px] text-slate-500 font-mono-code">{ep.path}</div>
+                    <div className="text-[11px] text-zinc-500 font-mono">{ep.path}</div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                         activeMock
-                          ? 'bg-amber-950/60 text-amber-300 border border-amber-800/60'
-                          : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/60'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                       }`}
                     >
-                      {activeMock ? 'MOCK' : 'LIVE'}
+                      {activeMock ? 'Mock' : 'Live'}
                     </span>
 
                     <button
                       onClick={() => handleToggleEndpoint(ep.key)}
-                      className={`px-2.5 py-1 rounded text-[11px] font-mono-code transition-all cursor-pointer border ${
+                      className={`px-2.5 py-1 rounded-md text-xs transition-colors cursor-pointer border ${
                         forcedReal
-                          ? 'bg-cyan-950/70 border-cyan-600 text-cyan-300'
-                          : 'bg-[#121a2c] border-[#222e47] text-slate-400 hover:text-slate-200 hover:bg-[#1a253e]'
+                          ? 'bg-zinc-100 border-zinc-100 text-zinc-900 font-medium'
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
                       }`}
                       title={forcedReal ? 'Forced to Real API' : 'Using default routing'}
                     >
-                      {forcedReal ? 'FORCED LIVE' : 'USE DEFAULT'}
+                      {forcedReal ? 'Forced live' : 'Use default'}
                     </button>
                   </div>
                 </div>

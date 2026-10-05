@@ -1,7 +1,6 @@
 import React from 'react'
 import type { CompareResult } from '../api/types'
 import { Card } from './ui'
-import { GitCompare } from 'lucide-react'
 
 export interface BaselineCompareProps {
   compare?: CompareResult | null
@@ -12,53 +11,57 @@ export const BaselineCompare: React.FC<BaselineCompareProps> = ({ compare }) => 
 
   return (
     <Card
-      title="Counterfactual Takeover Planner vs Naive Scorer"
-      subtitle="Demonstration of fix interaction awareness vs independent per-account checklists"
-      action={<GitCompare className="w-4 h-4 text-cyan-400" />}
+      title="Remediation approach comparison"
+      subtitle="Correlated graph planning versus independent per-account checklists"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Naive Baseline */}
-        <div className="p-3.5 bg-red-950/20 border border-red-900/40 rounded-lg">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-red-300 mb-2">
-            Naive Per-Account Checklist
+        <div className="p-4 rounded-lg border border-zinc-800 bg-zinc-900/20 space-y-2">
+          <h4 className="text-xs font-medium text-zinc-300">
+            Independent per-account checklist
           </h4>
-          <p className="text-[11px] text-slate-400 mb-3">
-            Treats accounts independently; recommends fixing Netflix first due to password reuse count.
+          <p className="text-xs text-zinc-500">
+            Evaluates accounts in isolation, prioritizing items with simple password reuse.
           </p>
-          <div className="space-y-1.5 mb-3 font-mono-code text-xs">
+          <div className="space-y-1.5 pt-2 text-xs text-zinc-400">
             {compare.baseline_top3.map((f, i) => (
-              <div key={i} className="text-slate-300">
+              <div key={i}>
                 {i + 1}. {f.title}
               </div>
             ))}
           </div>
-          <div className="text-xs font-mono-code text-red-400">
-            Projected Score: <strong>{compare.baseline_score_after}</strong>
+          <div className="pt-2 text-xs text-zinc-300 border-t border-zinc-800/80">
+            Projected score: <span className="font-semibold text-zinc-100">{compare.baseline_score_after}</span>
           </div>
         </div>
 
-        {/* Chokepoint CTP */}
-        <div className="p-3.5 bg-cyan-950/20 border border-cyan-900/40 rounded-lg">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-300 mb-2">
-            Chokepoint Correlated CTP
+        {/* Chokepoint Correlated */}
+        <div className="p-4 rounded-lg border border-zinc-800 bg-zinc-900/50 space-y-2">
+          <h4 className="text-xs font-medium text-zinc-100">
+            Correlated attack graph planner
           </h4>
-          <p className="text-[11px] text-slate-400 mb-3">
-            Identifies SIM swap & Google SSO root hubs; ranks by greedy marginal gain.
+          <p className="text-xs text-zinc-400">
+            Identifies central root recovery hubs and targets cascading chokepoints.
           </p>
-          <div className="space-y-1.5 mb-3 font-mono-code text-xs">
+          <div className="space-y-1.5 pt-2 text-xs text-zinc-300">
             {compare.chokepoint_top3.map((f, i) => (
-              <div key={i} className="text-slate-100 font-semibold">
+              <div key={i} className="font-medium text-zinc-200">
                 {i + 1}. {f.title}
               </div>
             ))}
           </div>
-          <div className="text-xs font-mono-code text-cyan-300">
-            Projected Score: <strong>{compare.chokepoint_score_after}</strong> (+27 pts)
+          <div className="pt-2 text-xs text-zinc-300 border-t border-zinc-800/80 flex items-center justify-between">
+            <span>
+              Projected score: <span className="font-semibold text-zinc-100">{compare.chokepoint_score_after}</span>
+            </span>
+            <span className="text-emerald-400 text-xs font-medium">
+              +{compare.chokepoint_score_after - compare.baseline_score_after} pts over baseline
+            </span>
           </div>
         </div>
       </div>
-      <p className="text-[10px] text-slate-500 italic mt-3">
-        * Both models evaluated under common random simulation worlds to verify interaction effects.
+      <p className="text-[11px] text-zinc-500 mt-3 pt-2 border-t border-zinc-800">
+        Both models evaluated under identical simulation worlds.
       </p>
     </Card>
   )

@@ -2,23 +2,18 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useScenario, useAnalysis, useApplyFix, useState_, useSelection, useSeedDemo } from '../api/hooks'
 import type { ScenarioRequest } from '../api/types'
-import { Card, Button, Chip, Skeleton } from '../components/ui'
+import { Card, Button, Skeleton } from '../components/ui'
 import { Graph, type GraphRef } from '../components/Graph'
 import { FixCard } from '../components/FixCard'
 import {
-  Radio,
-  ShieldCheck,
   Play,
   RotateCcw,
-  ShieldAlert,
-  ArrowRight,
-  ExternalLink,
   Sparkles,
 } from 'lucide-react'
 
 export const Scenarios: React.FC = () => {
   useEffect(() => {
-    document.title = 'Attack Scenarios & Blast Radius | Chokepoint Auditor'
+    document.title = 'Attack scenarios · Chokepoint'
   }, [])
 
   const { data: analysis } = useAnalysis()
@@ -35,17 +30,14 @@ export const Scenarios: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [appliedFixIds, setAppliedFixIds] = useState<Set<string>>(new Set())
 
-  // Accounts list for breach/compromise selection
   const accounts = useMemo(() => appState?.accounts ?? [], [appState])
 
-  // Sync valid target account when account list changes
   useEffect(() => {
     if (accounts.length > 0 && !accounts.some((a) => a.id === targetAccount)) {
       setTargetAccount(accounts[0].id)
     }
   }, [accounts, targetAccount])
 
-  // Execute scenario on change
   useEffect(() => {
     let req: ScenarioRequest
     if (kind === 'sim_swap') {
@@ -67,7 +59,6 @@ export const Scenarios: React.FC = () => {
   const maxHop = scenario?.cascade?.length ?? 0
   const baseScore = analysis?.score ?? 41
 
-  // Animate hop progression
   useEffect(() => {
     if (!isPlaying) return
     const interval = setInterval(() => {
@@ -83,7 +74,6 @@ export const Scenarios: React.FC = () => {
     return () => clearInterval(interval)
   }, [isPlaying, maxHop])
 
-  // Determine highlighted accounts based on current hop slider value
   const highlightIds = useMemo(() => {
     if (!scenario?.cascade) return []
     const ids = new Set<string>()
@@ -97,7 +87,6 @@ export const Scenarios: React.FC = () => {
       }
     }
 
-    // Always include entry origin node
     if (kind === 'sim_swap') addId('E_SIM')
     if (kind === 'lost_phone') addId('E_PHONE')
     if (kind === 'breach' || kind === 'compromise') addId(targetAccount)
@@ -124,149 +113,136 @@ export const Scenarios: React.FC = () => {
     kind === 'sim_swap'
       ? 'SIM swap'
       : kind === 'lost_phone'
-      ? 'Lost phone'
+      ? 'lost phone'
       : kind === 'breach'
-      ? 'Service credential leak'
-      : 'Account compromise'
+      ? 'service credential breach'
+      : 'account compromise'
 
   return (
     <div className="space-y-6">
-      {/* Header and Scenario Selector */}
-      <div className="bg-[#0b1222] border border-[#1c2638] rounded-lg p-5 space-y-4 shadow-lg">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono-code uppercase tracking-wider text-cyan-400">
-            <Radio className="w-4 h-4" />
-            <span>Interactive Adversarial Attack Simulator</span>
-          </div>
-          <h2 className="text-xl font-bold font-mono-code text-slate-100 mt-1">
-            Simulate Attack Scenarios & Blast Radius
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Evaluate blast radius cascades across your identity fabric under distinct adversarial entry conditions.
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-zinc-50">
+            Attack scenarios
+          </h1>
+          <p className="text-sm text-zinc-400 mt-1">
+            Simulate adversarial breach vectors and blast radius cascades across your identity fabric.
           </p>
         </div>
 
-        {/* Kind Tabs */}
-        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-[#1c2638] text-xs font-mono-code">
-          <button
-            onClick={() => setKind('sim_swap')}
-            className={`px-3.5 py-2 rounded-md transition-all cursor-pointer font-semibold ${
-              kind === 'sim_swap'
-                ? 'bg-red-950/80 text-red-200 border border-red-700 shadow-[0_0_12px_rgba(239,68,68,0.25)]'
-                : 'bg-[#0e1628] text-slate-400 hover:text-slate-200 border border-[#1e2a42]'
-            }`}
+        {accounts.length === 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => seedMutation.mutate()}
+            disabled={seedMutation.isPending}
           >
-            SIM Swap
-          </button>
-
-          <button
-            onClick={() => setKind('lost_phone')}
-            className={`px-3.5 py-2 rounded-md transition-all cursor-pointer font-semibold ${
-              kind === 'lost_phone'
-                ? 'bg-red-950/80 text-red-200 border border-red-700 shadow-[0_0_12px_rgba(239,68,68,0.25)]'
-                : 'bg-[#0e1628] text-slate-400 hover:text-slate-200 border border-[#1e2a42]'
-            }`}
-          >
-            Lost Phone
-          </button>
-
-          <button
-            onClick={() => setKind('breach')}
-            className={`px-3.5 py-2 rounded-md transition-all cursor-pointer font-semibold ${
-              kind === 'breach'
-                ? 'bg-red-950/80 text-red-200 border border-red-700 shadow-[0_0_12px_rgba(239,68,68,0.25)]'
-                : 'bg-[#0e1628] text-slate-400 hover:text-slate-200 border border-[#1e2a42]'
-            }`}
-          >
-            Service Breached
-          </button>
-
-          <button
-            onClick={() => setKind('compromise')}
-            className={`px-3.5 py-2 rounded-md transition-all cursor-pointer font-semibold ${
-              kind === 'compromise'
-                ? 'bg-red-950/80 text-red-200 border border-red-700 shadow-[0_0_12px_rgba(239,68,68,0.25)]'
-                : 'bg-[#0e1628] text-slate-400 hover:text-slate-200 border border-[#1e2a42]'
-            }`}
-          >
-            Account Compromised
-          </button>
-
-          {(kind === 'breach' || kind === 'compromise') && (
-            <div className="flex items-center gap-2 sm:ml-auto w-full sm:w-auto mt-2 sm:mt-0">
-              <span className="text-slate-400 text-xs whitespace-nowrap">Target Account:</span>
-              <select
-                value={targetAccount}
-                onChange={(e) => setTargetAccount(e.target.value)}
-                className="bg-[#070b14] border border-cyan-900/60 rounded px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 font-mono-code w-full sm:w-auto"
-              >
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.id})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+            Load demo persona
+          </Button>
+        )}
       </div>
 
-      {/* Error Banner with Retry */}
-      {scenarioMutation.isError && (
-        <div className="p-4 bg-red-950/40 border border-red-800 rounded-lg flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-red-200">Failed to simulate attack scenario</p>
-              <p className="text-xs text-red-400/80">Unable to query /scenario cascade projection data.</p>
-            </div>
-          </div>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => {
-              let req: ScenarioRequest
-              if (kind === 'sim_swap') req = { kind: 'entry', target: 'E_SIM' }
-              else if (kind === 'lost_phone') req = { kind: 'entry', target: 'E_PHONE' }
-              else if (kind === 'breach') req = { kind: 'breach', target: targetAccount }
-              else req = { kind: 'compromise', target: targetAccount }
-              scenarioMutation.mutate(req)
-            }}
-          >
-            Retry Simulation
-          </Button>
-        </div>
-      )}
-
-      {/* Empty State when no accounts exist */}
-      {accounts.length === 0 && (
-        <Card>
-          <div className="py-12 px-4 text-center max-w-lg mx-auto">
-            <div className="w-12 h-12 rounded-full bg-cyan-950/80 border border-cyan-800/80 flex items-center justify-center mx-auto text-cyan-400 mb-4 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-              <Radio className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold font-mono-code text-slate-100">
-              No Accounts Available for Simulation
+      {/* Scenario Selector Card */}
+      <Card>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-zinc-100">
+              Scenario entry vector
             </h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Attack scenario cascades require accounts and identity anchors to simulate SIM swaps, device theft, service breaches, and password compromise cascades.
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Select an initial compromise trigger to trace its propagation cascade.
             </p>
-            <div className="flex items-center justify-center gap-3 mt-6">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => seedMutation.mutate()}
-                disabled={seedMutation.isPending}
-                icon={<Sparkles className="w-4 h-4" />}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-800 text-xs">
+            <div className="flex items-center gap-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800">
+              <button
+                onClick={() => setKind('sim_swap')}
+                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                  kind === 'sim_swap'
+                    ? 'bg-zinc-800 text-zinc-100 font-medium'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
               >
-                {seedMutation.isPending ? 'Seeding Persona...' : 'Load Demo Persona'}
-              </Button>
-              <Link to="/accounts">
-                <Button variant="outline" size="sm">
-                  Add Accounts
-                </Button>
-              </Link>
+                SIM swap
+              </button>
+              <button
+                onClick={() => setKind('lost_phone')}
+                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                  kind === 'lost_phone'
+                    ? 'bg-zinc-800 text-zinc-100 font-medium'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Lost phone
+              </button>
+              <button
+                onClick={() => setKind('breach')}
+                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                  kind === 'breach'
+                    ? 'bg-zinc-800 text-zinc-100 font-medium'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Service breach
+              </button>
+              <button
+                onClick={() => setKind('compromise')}
+                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                  kind === 'compromise'
+                    ? 'bg-zinc-800 text-zinc-100 font-medium'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Account compromise
+              </button>
             </div>
+
+            {(kind === 'breach' || kind === 'compromise') && (
+              <div className="flex items-center gap-2 sm:ml-auto w-full sm:w-auto mt-2 sm:mt-0">
+                <span className="text-zinc-400 text-xs whitespace-nowrap">Target account:</span>
+                <select
+                  value={targetAccount}
+                  onChange={(e) => setTargetAccount(e.target.value)}
+                  className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1 text-xs text-zinc-100 focus:outline-none focus:border-zinc-700 w-full sm:w-auto"
+                >
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({a.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Empty State */}
+      {accounts.length === 0 && (
+        <Card className="py-12 px-4 text-center max-w-md mx-auto">
+          <h3 className="text-sm font-medium text-zinc-100">
+            No accounts available for simulation
+          </h3>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Attack scenarios require accounts in inventory to calculate recovery graphs and propagation cascades.
+          </p>
+          <div className="flex items-center justify-center gap-2 mt-5">
+            <Button
+              size="sm"
+              onClick={() => seedMutation.mutate()}
+              disabled={seedMutation.isPending}
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+              Load demo persona
+            </Button>
+            <Link to="/accounts">
+              <Button variant="outline" size="sm">
+                Add accounts
+              </Button>
+            </Link>
           </div>
         </Card>
       )}
@@ -274,102 +250,86 @@ export const Scenarios: React.FC = () => {
       {/* Loading Skeletons */}
       {scenarioMutation.isPending && (
         <div className="space-y-4">
-          <Skeleton className="h-32 rounded-lg" />
-          <Skeleton className="h-24 rounded-lg" />
-          <Skeleton className="h-96 rounded-lg" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-96 rounded-xl" />
         </div>
       )}
 
-      {/* Scenario Outcome Banner (PRD Diagnostic Format) */}
+      {/* Simulation Outcome Card */}
       {!scenarioMutation.isPending && scenario && (
-        <div className="bg-red-950/25 border border-red-900/60 rounded-lg p-5 shadow-lg space-y-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="space-y-1.5 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4 text-red-400" />
-                  SIMULATION OUTCOME
-                </span>
-                {scenario.leaked_group && (
-                  <Chip variant="warning" size="xs">
-                    Exposes Password Group: {scenario.leaked_group}
-                  </Chip>
-                )}
-                {scenario.falls === 0 && (
-                  <Chip variant="success" size="xs">
-                    POSTURE DEFENDED
-                  </Chip>
+        <Card>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-zinc-400">Simulation outcome</span>
+                {scenario.falls === 0 ? (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Posture defended
+                  </span>
+                ) : (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                    {scenario.falls} accounts compromised
+                  </span>
                 )}
               </div>
 
-              {/* Canonical PRD Sentence */}
-              <p className="text-base font-bold text-slate-100 font-mono-code leading-relaxed">
+              <p className="text-sm text-zinc-200 leading-relaxed">
                 {scenario.falls === 0 ? (
-                  <span className="text-emerald-400">
-                    Device lock holds: 0 accounts fall from lost phone scenario.
-                  </span>
+                  <span>Device lock holds: 0 accounts fall from lost phone scenario.</span>
                 ) : (
                   <>
-                    A {scenarioLabel} would take over{' '}
-                    <span className="text-red-400 underline decoration-red-600 font-black">
-                      {scenario.falls} accounts
-                    </span>{' '}
-                    in {scenario.cascade.length} {scenario.cascade.length === 1 ? 'step' : 'steps'}; score drops{' '}
-                    <span className="text-amber-400 font-bold">{baseScore}</span> →{' '}
-                    <span className="text-red-500 font-black">{scenario.score_during}</span>.
+                    A {scenarioLabel} would compromise{' '}
+                    <span className="font-semibold text-zinc-50">{scenario.falls} accounts</span> in{' '}
+                    {scenario.cascade.length} {scenario.cascade.length === 1 ? 'step' : 'steps'}. Posture score drops from{' '}
+                    <span className="font-semibold text-zinc-400 font-mono-code">{baseScore}</span> to{' '}
+                    <span className="font-semibold text-red-400 font-mono-code">{scenario.score_during}</span>.
                   </>
                 )}
               </p>
             </div>
 
-            {/* Impact Metric Cards */}
-            <div className="flex items-center gap-3 font-mono-code text-xs">
-              <div className="p-3 bg-[#070b14]/90 border border-red-950/80 rounded-lg text-right min-w-[130px]">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-                  Score During Attack
-                </span>
-                <span className="text-xl font-bold text-red-400 font-mono-code">
+            <div className="flex items-center gap-3 text-xs">
+              <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg text-right min-w-[130px]">
+                <span className="text-zinc-500 text-[11px] block">Score during attack</span>
+                <span className="text-lg font-semibold text-red-400 font-mono-code tabular-nums">
                   {scenario.score_during}
-                  <span className="text-xs text-slate-500">/100</span>
+                  <span className="text-xs text-zinc-500 font-normal"> / 100</span>
                 </span>
               </div>
-              <div className="p-3 bg-[#070b14]/90 border border-amber-950/80 rounded-lg text-right min-w-[120px]">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-                  Expected Loss Spike
-                </span>
-                <span className="text-xl font-bold text-amber-400 font-mono-code">
+              <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg text-right min-w-[130px]">
+                <span className="text-zinc-500 text-[11px] block">Expected loss spike</span>
+                <span className="text-lg font-semibold text-amber-400 font-mono-code tabular-nums">
                   +{scenario.el_delta.toFixed(1)}
-                  <span className="text-xs text-slate-500"> EL</span>
+                  <span className="text-xs text-zinc-500 font-normal"> EL</span>
                 </span>
               </div>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Hop Progression Slider Bar */}
       {maxHop > 0 && (
         <Card
-          title="Blast Radius Hop Progression"
+          title="Blast radius hop progression"
           subtitle="Step through attack rounds to trace compromised accounts on the graph below"
           action={
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="xs"
-                onClick={() => {
-                  setCurrentHop(0)
-                  setIsPlaying(true)
-                }}
-                icon={isPlaying ? <RotateCcw className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              >
-                {isPlaying ? 'Replaying...' : 'Play Cascade'}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => {
+                setCurrentHop(0)
+                setIsPlaying(true)
+              }}
+            >
+              {isPlaying ? <RotateCcw className="w-3.5 h-3.5 mr-1" /> : <Play className="w-3.5 h-3.5 mr-1" />}
+              {isPlaying ? 'Replaying' : 'Play cascade'}
+            </Button>
           }
         >
-          <div className="space-y-5">
-            <div className="flex items-center gap-4 bg-[#080d1a] p-3 rounded-lg border border-[#1b263b]">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 bg-zinc-900 p-3 rounded-lg border border-zinc-800">
               <input
                 type="range"
                 min={0}
@@ -380,47 +340,45 @@ export const Scenarios: React.FC = () => {
                   setIsPlaying(false)
                   setCurrentHop(Number(e.target.value))
                 }}
-                className="w-full h-2.5 bg-[#121a2c] rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-100"
               />
-              <span className="font-mono-code text-xs font-bold text-cyan-300 min-w-[90px] text-right bg-[#0f172a] px-2.5 py-1 rounded border border-cyan-900/60">
+              <span className="text-xs font-medium text-zinc-300 min-w-[80px] text-right">
                 Round {currentHop} / {maxHop}
               </span>
             </div>
 
-            {/* Cascade Rounds Breakdown with clickable account triggers */}
+            {/* Cascade Rounds Breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {scenario?.cascade.map((round) => {
                 const isActive = round.round <= currentHop
                 return (
                   <div
                     key={round.round}
-                    className={`p-3.5 rounded-lg border transition-all ${
+                    className={`p-3 rounded-lg border transition-colors ${
                       isActive
-                        ? 'bg-red-950/30 border-red-800/80 shadow-[0_0_14px_rgba(239,68,68,0.2)]'
-                        : 'bg-[#090d18] border-[#1c2638] opacity-50'
+                        ? 'border-zinc-700 bg-zinc-900/60'
+                        : 'border-zinc-800/60 bg-zinc-900/20 opacity-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between text-xs font-mono-code mb-2.5 pb-1.5 border-b border-[#1c2638]">
-                      <span className="font-bold text-red-300 flex items-center gap-1.5">
-                        <ArrowRight className="w-3 h-3 text-red-400" /> Round #{round.round}
+                    <div className="flex items-center justify-between text-xs mb-2 pb-1.5 border-b border-zinc-800">
+                      <span className="font-medium text-zinc-200">
+                        Round {round.round}
                       </span>
-                      <span className="text-[11px] text-slate-400">
-                        {round.accounts.length} {round.accounts.length === 1 ? 'account' : 'accounts'} compromised
+                      <span className="text-zinc-500 text-[11px]">
+                        {round.accounts.length} {round.accounts.length === 1 ? 'account' : 'accounts'}
                       </span>
                     </div>
 
-                    <div className="space-y-2 pl-2 border-l border-red-900/60">
+                    <div className="space-y-1.5 pl-2 border-l border-zinc-800">
                       {round.accounts.map((a) => (
-                        <div key={a.id} className="text-xs group">
+                        <div key={a.id} className="text-xs">
                           <button
                             onClick={() => openAccountDetail(a.id)}
-                            className="font-bold text-slate-100 hover:text-cyan-300 flex items-center gap-1 text-left cursor-pointer transition-colors"
-                            title="Inspect account vulnerability profile"
+                            className="font-medium text-zinc-200 hover:text-zinc-50 text-left cursor-pointer"
                           >
-                            <span>{a.id}</span>
-                            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-cyan-400 transition-opacity" />
+                            {a.id}
                           </button>
-                          <span className="text-[11px] text-slate-400 block italic leading-tight mt-0.5">
+                          <span className="text-[11px] text-zinc-500 block leading-tight">
                             via {a.via}
                           </span>
                         </div>
@@ -436,8 +394,8 @@ export const Scenarios: React.FC = () => {
 
       {/* Graph Visualizer highlighting current hop accounts */}
       <Card
-        title="Cascade Attack Topology & Blast Radius"
-        subtitle="Compromised accounts highlighted in red; unaffected accounts dimmed"
+        title="Attack topology and cascade path"
+        subtitle="Compromised accounts highlighted; unaffected accounts dimmed"
       >
         {analysis?.graph && (
           <Graph
@@ -450,12 +408,11 @@ export const Scenarios: React.FC = () => {
         )}
       </Card>
 
-      {/* "What to do next": Next Actions Remediations using FixCard */}
+      {/* Next Actions Remediations */}
       {scenario?.next_actions && scenario.next_actions.length > 0 && (
         <Card
-          title="What to do next — Neutralize this Attack Trajectory"
-          subtitle="Targeted countermeasures ranked to eliminate this specific cascade"
-          action={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
+          title="Recommended countermeasures"
+          subtitle="Targeted fixes that eliminate this specific cascade"
         >
           <div className="space-y-3">
             {scenario.next_actions.map((action) => (

@@ -1,17 +1,15 @@
 import React, { useState } from 'react'
 import { useReview, useCompleteReview, useApplyFix, usePreview, useSelection } from '../api/hooks'
-import { Drawer, Button, Chip, Skeleton, useToast } from './ui'
+import { Drawer, Button, useToast } from './ui'
 import {
   AlertTriangle,
   CheckCircle,
   ShieldAlert,
-  Clock,
   ArrowRight,
   ShieldCheck,
   RefreshCw,
   Eye,
   Check,
-  Info,
 } from 'lucide-react'
 
 export interface AlertsPanelProps {
@@ -56,7 +54,7 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
     try {
       await applyFixMutation.mutateAsync(fixId)
       setAppliedFixIds((prev) => new Set(prev).add(fixId))
-      showToast('Remediation Applied', `Fix '${fixId}' committed successfully. Score updated.`, 'success')
+      showToast('Remediation applied', `Fix '${fixId}' committed successfully.`, 'success')
       refetch()
     } catch {
       // Handled globally
@@ -92,8 +90,8 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
     try {
       await completeReviewMutation.mutateAsync()
       showToast(
-        'Review Completed',
-        `Privacy & hygiene audit verified as of ${asOfStr}. Next review in 30 days.`,
+        'Review completed',
+        `Privacy & hygiene audit verified as of ${asOfStr}. Next review scheduled in 30 days.`,
         'success'
       )
       refetch()
@@ -107,11 +105,11 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title="Security & Hygiene Alerts"
-      subtitle="Continuous audit telemetry: weak 2FA, credential reuse, stale backup routes & review schedule"
+      title="Security & hygiene review"
+      subtitle="Weak second-factor configurations, password reuse, and review schedule"
       width="lg"
       footer={
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full text-xs">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -119,20 +117,17 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
               onClick={() => {
                 setAsOfOffsetDays((prev) => prev + 30)
               }}
-              icon={<Clock className="w-3.5 h-3.5 text-cyan-400" />}
-              title="Fast-forward evaluation timestamp to simulate 30-day review cadence"
             >
-              +30 Days Simulation
+              +30 days simulation
             </Button>
             {asOfOffsetDays > 0 && (
               <>
-                <span className="text-[11px] font-mono-code text-cyan-400">
-                  (as of {asOfStr})
+                <span className="text-zinc-400 font-mono-code">
+                  ({asOfStr})
                 </span>
                 <button
                   onClick={() => setAsOfOffsetDays(0)}
-                  className="text-[11px] text-slate-400 hover:text-red-300 underline font-mono-code cursor-pointer"
-                  title="Reset date to today"
+                  className="text-zinc-500 hover:text-zinc-300 underline cursor-pointer"
                 >
                   Reset
                 </button>
@@ -144,37 +139,34 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
               variant="ghost"
               size="xs"
               onClick={() => refetch()}
-              icon={<RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? 'animate-spin' : ''}`} />}
             >
-              Run Review
+              <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
+              Recheck
             </Button>
             <Button
-              variant="primary"
               size="sm"
               loading={completeReviewMutation.isPending}
               onClick={handleCompleteReview}
-              icon={<CheckCircle className="w-4 h-4" />}
             >
-              Mark Reviewed
+              <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+              Complete review
             </Button>
           </div>
         </div>
       }
     >
-      <div className="space-y-6">
-        {/* Controls Summary Banner */}
-        <div className="flex items-center justify-between bg-[#101728] border border-[#1e2a42] p-3.5 rounded-lg shadow-sm">
-          <div className="flex items-center gap-3 text-xs font-mono-code">
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-400">ACTIVE FINDINGS:</span>
-              <span className="font-bold text-slate-100">{items.length}</span>
-            </div>
-            <span className="text-slate-600">|</span>
-            <span className="text-red-400 font-bold">{highSev.length} High</span>
-            <span className="text-slate-600">|</span>
-            <span className="text-amber-400 font-bold">{medSev.length} Med</span>
-            <span className="text-slate-600">|</span>
-            <span className="text-slate-400 font-bold">{lowSev.length} Info</span>
+      <div className="space-y-6 text-xs">
+        {/* Summary header */}
+        <div className="flex items-center justify-between bg-zinc-900/60 border border-zinc-800 p-4 rounded-xl">
+          <div className="flex items-center gap-3">
+            <span className="text-zinc-400">Active findings:</span>
+            <span className="font-semibold text-zinc-100">{items.length}</span>
+            <span className="text-zinc-600">·</span>
+            <span className="text-red-400">{highSev.length} high</span>
+            <span className="text-zinc-600">·</span>
+            <span className="text-amber-400">{medSev.length} medium</span>
+            <span className="text-zinc-600">·</span>
+            <span className="text-zinc-400">{lowSev.length} info</span>
           </div>
 
           <Button
@@ -182,26 +174,25 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
             size="xs"
             onClick={() => refetch()}
             loading={isRefetching}
-            className="text-cyan-400 hover:text-cyan-300 font-mono-code text-xs"
+            className="text-zinc-400 hover:text-zinc-100"
           >
-            Run Review Now
+            Run check now
           </Button>
         </div>
 
         {/* Content Items */}
         {isLoading ? (
           <div className="space-y-3">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
+            <div className="h-20 bg-zinc-900 rounded-xl animate-pulse" />
+            <div className="h-20 bg-zinc-900 rounded-xl animate-pulse" />
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center py-14 border border-dashed border-[#1c2638] rounded-lg bg-[#0a0f1d]/50">
-            <ShieldCheck className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-90" />
-            <h4 className="text-sm font-bold text-slate-100 font-mono-code">
-              Zero Unresolved Hygiene Violations
+          <div className="text-center py-12 border border-zinc-800 rounded-xl bg-zinc-900/30">
+            <ShieldCheck className="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-80" />
+            <h4 className="text-sm font-medium text-zinc-100">
+              Zero unresolved violations
             </h4>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto leading-relaxed">
               All credentials, multi-factor gates, and recovery endpoints are verified healthy under the current threat model.
             </p>
           </div>
@@ -210,9 +201,9 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
             {/* High Severity Group */}
             {highSev.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-mono-code font-bold uppercase tracking-wider text-red-400 pb-1 border-b border-red-950">
-                  <ShieldAlert className="w-4 h-4 text-red-400" />
-                  <span>High Severity ({highSev.length})</span>
+                <div className="flex items-center gap-2 text-xs font-medium text-red-400 pb-1 border-b border-zinc-800">
+                  <ShieldAlert className="w-4 h-4" />
+                  <span>High severity ({highSev.length})</span>
                 </div>
 
                 <div className="space-y-2.5">
@@ -223,28 +214,33 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
                     return (
                       <div
                         key={item.id}
-                        className={`p-4 rounded-lg border transition-all ${
+                        className={`p-4 rounded-xl border transition-colors ${
                           isApplied
-                            ? 'bg-[#0d1627]/50 border-emerald-900/60 opacity-75'
-                            : 'bg-red-950/20 border-red-900/50 hover:border-red-800/80 shadow-sm'
+                            ? 'bg-zinc-900/30 border-zinc-800/80 opacity-75'
+                            : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                           <div className="space-y-1 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Chip variant={isApplied ? 'success' : 'danger'} size="xs">
-                                {isApplied ? 'REMEDIATED' : item.kind.replace(/_/g, ' ').toUpperCase()}
-                              </Chip>
-                              <span className="text-xs font-bold text-slate-100 font-mono-code">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                                  isApplied
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                }`}
+                              >
+                                {isApplied ? 'Remediated' : 'High'}
+                              </span>
+                              <span className="text-xs font-medium text-zinc-100">
                                 {item.title}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-300 leading-relaxed font-sans mt-1">
+                            <p className="text-xs text-zinc-400 leading-relaxed mt-1">
                               {item.detail}
                             </p>
                           </div>
 
-                          {/* Action Buttons */}
                           {item.fix_id && (
                             <div className="flex items-center gap-2 self-end sm:self-start">
                               <Button
@@ -252,50 +248,54 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
                                 size="xs"
                                 loading={previewMutation.isPending && previewingFixId === item.fix_id}
                                 onClick={() => handlePreview(item.fix_id!)}
-                                className="text-slate-400 hover:text-cyan-300 font-mono-code text-[11px]"
+                                className="text-zinc-400 hover:text-zinc-100"
                               >
                                 <Eye className="w-3 h-3 mr-1" />
                                 {isPreviewOpen ? 'Hide' : 'Preview'}
                               </Button>
                               <Button
-                                variant={isApplied ? 'secondary' : 'danger'}
+                                variant={isApplied ? 'secondary' : 'default'}
                                 size="xs"
                                 disabled={isApplied}
                                 loading={applyFixMutation.isPending}
                                 onClick={() => handleFix(item.fix_id)}
-                                icon={isApplied ? <Check className="w-3 h-3" /> : undefined}
                               >
-                                {isApplied ? 'Fixed' : 'Fix'}
+                                {isApplied ? (
+                                  <>
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Fixed
+                                  </>
+                                ) : (
+                                  'Fix'
+                                )}
                               </Button>
                             </div>
                           )}
                         </div>
 
-                        {/* Inline Preview Drawer if toggled */}
                         {isPreviewOpen && previewData && (
-                          <div className="mt-3 p-2.5 bg-[#090d18] border border-cyan-900/60 rounded text-xs font-mono-code flex items-center justify-between">
-                            <span className="text-slate-300">
-                              Estimated Score Impact: {previewData.before} →{' '}
-                              <strong className="text-emerald-400">{previewData.after}</strong>
+                          <div className="mt-3 p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs flex items-center justify-between">
+                            <span className="text-zinc-300">
+                              Estimated score impact: {previewData.before} →{' '}
+                              <strong className="text-emerald-400 font-mono-code">{previewData.after}</strong>
                             </span>
-                            <span className="text-cyan-400">
+                            <span className="text-zinc-400 font-mono-code">
                               ΔEL: {previewData.dEl >= 0 ? `+${previewData.dEl}` : previewData.dEl}
                             </span>
                           </div>
                         )}
 
-                        {/* Target Account Link */}
                         {item.target && item.target !== 'system' && (
-                          <div className="mt-3 pt-2 border-t border-red-950/60 flex items-center justify-between text-[11px] font-mono-code">
-                            <span className="text-slate-400">Target Node: {item.target}</span>
+                          <div className="mt-3 pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-400">
+                            <span>Target: {item.target}</span>
                             <button
                               onClick={() => {
                                 openAccountDetail(item.target)
                                 onClose()
                               }}
-                              className="text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 font-semibold cursor-pointer"
+                              className="text-zinc-200 hover:text-zinc-50 inline-flex items-center gap-1 font-medium cursor-pointer"
                             >
-                              View Account <ArrowRight className="w-3 h-3" />
+                              View account <ArrowRight className="w-3 h-3" />
                             </button>
                           </div>
                         )}
@@ -309,9 +309,9 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
             {/* Medium Severity Group */}
             {medSev.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-mono-code font-bold uppercase tracking-wider text-amber-400 pb-1 border-b border-amber-950">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  <span>Medium Severity ({medSev.length})</span>
+                <div className="flex items-center gap-2 text-xs font-medium text-amber-400 pb-1 border-b border-zinc-800">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Medium severity ({medSev.length})</span>
                 </div>
 
                 <div className="space-y-2.5">
@@ -322,23 +322,29 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
                     return (
                       <div
                         key={item.id}
-                        className={`p-4 rounded-lg border transition-all ${
+                        className={`p-4 rounded-xl border transition-colors ${
                           isApplied
-                            ? 'bg-[#0d1627]/50 border-emerald-900/60 opacity-75'
-                            : 'bg-amber-950/20 border-amber-900/50 hover:border-amber-800/80 shadow-sm'
+                            ? 'bg-zinc-900/30 border-zinc-800/80 opacity-75'
+                            : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                           <div className="space-y-1 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Chip variant={isApplied ? 'success' : 'warning'} size="xs">
-                                {isApplied ? 'REMEDIATED' : item.kind.replace(/_/g, ' ').toUpperCase()}
-                              </Chip>
-                              <span className="text-xs font-bold text-slate-100 font-mono-code">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                                  isApplied
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                }`}
+                              >
+                                {isApplied ? 'Remediated' : 'Medium'}
+                              </span>
+                              <span className="text-xs font-medium text-zinc-100">
                                 {item.title}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-300 leading-relaxed font-sans mt-1">
+                            <p className="text-xs text-zinc-400 leading-relaxed mt-1">
                               {item.detail}
                             </p>
                           </div>
@@ -350,48 +356,54 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
                                 size="xs"
                                 loading={previewMutation.isPending && previewingFixId === item.fix_id}
                                 onClick={() => handlePreview(item.fix_id!)}
-                                className="text-slate-400 hover:text-cyan-300 font-mono-code text-[11px]"
+                                className="text-zinc-400 hover:text-zinc-100"
                               >
                                 <Eye className="w-3 h-3 mr-1" />
                                 {isPreviewOpen ? 'Hide' : 'Preview'}
                               </Button>
                               <Button
-                                variant={isApplied ? 'secondary' : 'secondary'}
+                                variant={isApplied ? 'secondary' : 'default'}
                                 size="xs"
                                 disabled={isApplied}
                                 loading={applyFixMutation.isPending}
                                 onClick={() => handleFix(item.fix_id)}
-                                icon={isApplied ? <Check className="w-3 h-3" /> : undefined}
                               >
-                                {isApplied ? 'Fixed' : 'Fix'}
+                                {isApplied ? (
+                                  <>
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Fixed
+                                  </>
+                                ) : (
+                                  'Fix'
+                                )}
                               </Button>
                             </div>
                           )}
                         </div>
 
                         {isPreviewOpen && previewData && (
-                          <div className="mt-3 p-2.5 bg-[#090d18] border border-cyan-900/60 rounded text-xs font-mono-code flex items-center justify-between">
-                            <span className="text-slate-300">
-                              Estimated Score Impact: {previewData.before} →{' '}
-                              <strong className="text-emerald-400">{previewData.after}</strong>
+                          <div className="mt-3 p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs flex items-center justify-between">
+                            <span className="text-zinc-300">
+                              Estimated score impact: {previewData.before} →{' '}
+                              <strong className="text-emerald-400 font-mono-code">{previewData.after}</strong>
                             </span>
-                            <span className="text-cyan-400">
+                            <span className="text-zinc-400 font-mono-code">
                               ΔEL: {previewData.dEl >= 0 ? `+${previewData.dEl}` : previewData.dEl}
                             </span>
                           </div>
                         )}
 
                         {item.target && item.target !== 'system' && (
-                          <div className="mt-3 pt-2 border-t border-amber-950/60 flex items-center justify-between text-[11px] font-mono-code">
-                            <span className="text-slate-400">Target Node: {item.target}</span>
+                          <div className="mt-3 pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-400">
+                            <span>Target: {item.target}</span>
                             <button
                               onClick={() => {
                                 openAccountDetail(item.target)
                                 onClose()
                               }}
-                              className="text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 font-semibold cursor-pointer"
+                              className="text-zinc-200 hover:text-zinc-50 inline-flex items-center gap-1 font-medium cursor-pointer"
                             >
-                              View Account <ArrowRight className="w-3 h-3" />
+                              View account <ArrowRight className="w-3 h-3" />
                             </button>
                           </div>
                         )}
@@ -401,61 +413,8 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => 
                 </div>
               </div>
             )}
-
-            {/* Low Severity / Maintenance Group */}
-            {lowSev.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-mono-code font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-[#1e2a42]">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                  <span>Scheduled Maintenance & Audit ({lowSev.length})</span>
-                </div>
-
-                <div className="space-y-2.5">
-                  {lowSev.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 bg-[#0d1424] border border-[#1e2a42] rounded-lg shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Chip variant="default" size="xs">
-                              {item.kind.replace(/_/g, ' ').toUpperCase()}
-                            </Chip>
-                            <span className="text-xs font-bold text-slate-200 font-mono-code">
-                              {item.title}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-400 mt-1 leading-relaxed">{item.detail}</p>
-                        </div>
-
-                        {item.kind === 'periodic_review' && (
-                          <Button
-                            variant="secondary"
-                            size="xs"
-                            loading={completeReviewMutation.isPending}
-                            onClick={handleCompleteReview}
-                            className="font-mono-code text-[11px]"
-                          >
-                            Mark Reviewed
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
-
-        {/* Mandatory PRD Disclaimer */}
-        <div className="pt-4 border-t border-[#1c2638] flex items-center gap-2 text-[11px] text-slate-500 font-mono-code">
-          <Info className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-          <span>
-            Model-based estimate, not a measured probability. Data stays on this device.
-          </span>
-        </div>
       </div>
     </Drawer>
   )

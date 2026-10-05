@@ -1,7 +1,7 @@
 import React from 'react'
 import type { Fix } from '../api/types'
-import { Card, Button, Chip } from './ui'
-import { Check, ShieldCheck, Zap } from 'lucide-react'
+import { Card, Button } from './ui'
+import { Check } from 'lucide-react'
 
 export interface FixCardProps {
   fix: Fix
@@ -21,55 +21,51 @@ export const FixCard: React.FC<FixCardProps> = ({
   return (
     <Card
       id={`fix-card-${fix.id.replace(/:/g, '-')}`}
-      className={`border transition-all duration-150 ${
-        fix.in_best3 ? 'border-cyan-700/60 bg-[#0e1627]' : 'border-[#1c2638] bg-[#0d131f]'
-      }`}
+      className="p-5"
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Left Side Info */}
         <div className="space-y-1.5 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {fix.in_best3 && (
-              <Chip variant="accent" size="xs">
-                <Zap className="w-3 h-3 inline mr-0.5" /> BEST 3
-              </Chip>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-200 border border-zinc-700/50 font-medium">
+                Top 3 recommendation
+              </span>
             )}
-            <Chip
-              variant={
+            <span
+              className={`text-[11px] px-2 py-0.5 rounded-full border ${
                 fix.effort === 'low'
-                  ? 'success'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                   : fix.effort === 'medium'
-                  ? 'warning'
-                  : 'danger'
-              }
-              size="xs"
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+              }`}
             >
-              Effort: {fix.effort.toUpperCase()}
-            </Chip>
-            <span className="text-xs font-mono-code text-slate-400">
-              Rank #{fix.rank}
+              {fix.effort === 'low' ? 'Low effort' : fix.effort === 'medium' ? 'Medium effort' : 'High effort'}
+            </span>
+            <span className="text-xs text-zinc-500 font-mono-code">
+              #{fix.rank}
             </span>
           </div>
 
-          <h4 className="text-sm font-bold text-slate-100">{fix.title}</h4>
-          <p className="text-xs text-slate-400 leading-relaxed">{fix.why}</p>
+          <h4 className="text-sm font-medium text-zinc-100">{fix.title}</h4>
+          <p className="text-xs text-zinc-400 leading-relaxed">{fix.why}</p>
 
-          {/* Interaction Note */}
           {fix.note && (
-            <p className="text-[11px] font-mono-code text-cyan-300/90 bg-cyan-950/40 border border-cyan-800/40 px-2 py-1 rounded inline-block">
+            <p className="text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-md inline-block">
               {fix.note}
             </p>
           )}
         </div>
 
         {/* Right Side Metrics & Action */}
-        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-[#1c2638] pt-3 md:pt-0 md:pl-4 justify-between md:justify-end">
-          <div className="text-right font-mono-code">
-            <div className="text-xs text-slate-400">
-              Marginal Gain: <strong className="text-emerald-400">+{fix.marginal_gain.toFixed(1)}</strong>
+        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-zinc-800 pt-3 md:pt-0 md:pl-5 justify-between md:justify-end">
+          <div className="text-right">
+            <div className="text-xs text-zinc-400">
+              Gain: <strong className="text-emerald-400 font-mono-code font-normal">+{fix.marginal_gain.toFixed(1)}</strong>
             </div>
-            <div className="text-[11px] text-slate-500">
-              Score After: <strong className="text-slate-200">{fix.score_after}</strong>
+            <div className="text-xs text-zinc-500">
+              Score after: <strong className="text-zinc-200 font-mono-code font-normal">{fix.score_after}</strong>
             </div>
           </div>
 
@@ -80,21 +76,27 @@ export const FixCard: React.FC<FixCardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onPreview(fix.id)}
-                className="text-xs font-mono-code text-slate-400"
+                className="text-xs text-zinc-400 hover:text-zinc-100"
               >
                 Preview
               </Button>
             )}
             <Button
               id={`apply-btn-${fix.id.replace(/:/g, '-')}`}
-              variant={fix.in_best3 ? 'primary' : 'secondary'}
+              variant={fix.in_best3 ? 'default' : 'secondary'}
               size="sm"
               loading={isApplying}
               disabled={isApplied}
               onClick={() => onApply(fix.id)}
-              icon={isApplied ? <Check className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
             >
-              {isApplied ? 'Remediated' : 'Apply Fix'}
+              {isApplied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                  Applied
+                </>
+              ) : (
+                'Apply fix'
+              )}
             </Button>
           </div>
         </div>

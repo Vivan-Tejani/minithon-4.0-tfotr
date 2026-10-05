@@ -4,11 +4,11 @@ import { useFixes, useApplyFix, useSeedDemo } from '../api/hooks'
 import { FixCard } from '../components/FixCard'
 import { PreviewCard } from '../components/PreviewCard'
 import { Skeleton, Button, Card } from '../components/ui'
-import { Zap, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react'
 
 export const Fixes: React.FC = () => {
   useEffect(() => {
-    document.title = 'Remediation Fixes | Chokepoint Auditor'
+    document.title = 'Fix checklist · Chokepoint'
   }, [])
 
   const { data: fixes, isLoading, isError, refetch } = useFixes()
@@ -37,83 +37,97 @@ export const Fixes: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-zinc-50">
+            Fix checklist
+          </h1>
+          <p className="text-sm text-zinc-400 mt-1">
+            Prioritized security mitigations calculated across attack trajectories.
+          </p>
+        </div>
+
+        {plan.length === 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => seedMutation.mutate()}
+            disabled={seedMutation.isPending}
+          >
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+            Load demo persona
+          </Button>
+        )}
+      </div>
+
       {/* Error Banner with Retry */}
       {isError && (
-        <div className="p-4 bg-red-950/40 border border-red-800 rounded-lg flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-red-200">Failed to calculate remediation plan</p>
-              <p className="text-xs text-red-400/80">Unable to query /fixes counterfactual optimization data.</p>
+        <Card className="border-red-500/20 bg-red-500/5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-400">Failed to calculate remediation plan</p>
+                <p className="text-xs text-zinc-400">Could not retrieve fixes from backend optimization engine.</p>
+              </div>
             </div>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
           </div>
-          <Button variant="danger" size="sm" onClick={() => refetch()}>
-            Retry Fixes
-          </Button>
-        </div>
+        </Card>
       )}
 
-      {/* Best-3 Plan Header Card */}
-      <div className="bg-gradient-to-r from-[#0b192e] via-[#0f213d] to-[#0c182b] border border-cyan-500/40 rounded-lg p-5 shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Projected Score Impact Card */}
+      {plan.length > 0 && (
+        <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-cyan-300">
-                Counterfactual Takeover Planner (CTP)
-              </span>
-              <span className="text-[10px] font-mono-code bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-700 text-cyan-300">
-                GREEDY CELF RANKED
-              </span>
-            </div>
-            <h2 className="text-xl font-bold text-slate-100 font-mono-code">
-              High-Impact Remediation Checklist
-            </h2>
-            <p className="text-xs text-slate-300 max-w-2xl">
-              Fixes are re-evaluated marginal to previous recommendations inside identical attack worlds.
-              Redundant mitigations naturally decrease in rank.
+            <h3 className="text-sm font-medium text-zinc-100">
+              Correlated remediation plan
+            </h3>
+            <p className="text-xs text-zinc-400 max-w-2xl leading-relaxed">
+              Fixes are re-evaluated marginal to previous recommendations. Resolving the top 3 items addresses common root recovery vectors.
             </p>
           </div>
 
-          <div className="p-3 bg-[#070b14] border border-[#1c2638] rounded-lg text-right font-mono-code flex-shrink-0">
-            <div className="text-[11px] text-slate-400">Current → Projected Posture</div>
-            <div className="text-xl font-bold flex items-center gap-2 justify-end mt-0.5">
-              <span className="text-amber-400">{baseScore}</span>
-              <span className="text-slate-500 text-sm">→</span>
-              <span className="text-emerald-400">{maxProjected}</span>
+          <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg text-right flex-shrink-0">
+            <div className="text-xs text-zinc-400">Projected score</div>
+            <div className="text-lg font-semibold flex items-center gap-2 justify-end mt-0.5 font-mono-code tabular-nums">
+              <span className="text-zinc-400">{baseScore}</span>
+              <span className="text-zinc-600 text-xs font-sans">→</span>
+              <span className="text-zinc-100">{maxProjected}</span>
               <span className="text-xs font-normal text-emerald-400">
                 (+{maxProjected - baseScore} pts)
               </span>
             </div>
           </div>
-        </div>
-      </div>
+        </Card>
+      )}
 
       {/* Empty State when 0 fixes */}
       {!isLoading && !isError && plan.length === 0 && (
         <Card>
-          <div className="py-12 px-4 text-center max-w-lg mx-auto">
-            <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-800/80 flex items-center justify-center mx-auto text-emerald-400 mb-4 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold font-mono-code text-slate-100">
-              Zero Pending Remediations
+          <div className="py-12 px-4 text-center max-w-md mx-auto">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400/80 mx-auto mb-3" />
+            <h3 className="text-sm font-medium text-zinc-100">
+              No pending remediations
             </h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Either all registered services have already been hardened to their optimal security posture, or no accounts have been loaded into inventory yet.
+            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+              Either all registered services are already hardened, or no accounts have been added yet.
             </p>
-            <div className="flex items-center justify-center gap-3 mt-6">
+            <div className="flex items-center justify-center gap-2 mt-5">
               <Button
-                variant="primary"
                 size="sm"
                 onClick={() => seedMutation.mutate()}
                 disabled={seedMutation.isPending}
-                icon={<Sparkles className="w-4 h-4" />}
               >
-                {seedMutation.isPending ? 'Seeding Persona...' : 'Load Demo Persona'}
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                Load demo persona
               </Button>
               <Link to="/accounts">
                 <Button variant="outline" size="sm">
-                  Go to Accounts
+                  Go to accounts
                 </Button>
               </Link>
             </div>
@@ -123,32 +137,31 @@ export const Fixes: React.FC = () => {
 
       {/* Filter and Toggles Bar */}
       {plan.length > 0 && (
-        <div className="flex items-center justify-between bg-[#0d131f] border border-[#1c2638] p-3 rounded-lg text-xs font-mono-code">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800">
             <button
               onClick={() => setQuickWinsOnly(false)}
-              className={`px-3 py-1.5 rounded transition-colors ${
+              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                 !quickWinsOnly
-                  ? 'bg-[#152037] text-cyan-300 border border-cyan-800'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-zinc-800 text-zinc-100 font-medium'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              All Recommendations ({plan.length})
+              All recommendations ({plan.length})
             </button>
             <button
               onClick={() => setQuickWinsOnly(true)}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                 quickWinsOnly
-                  ? 'bg-[#152037] text-cyan-300 border border-cyan-800'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-zinc-800 text-zinc-100 font-medium'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Quick Wins Only (Low Effort)
+              Quick wins only
             </button>
           </div>
 
-          <span className="text-slate-500 hidden sm:inline text-[11px]">
+          <span className="text-zinc-500 hidden sm:inline text-xs">
             {appliedFixes.size} remediations applied this session
           </span>
         </div>
@@ -159,9 +172,9 @@ export const Fixes: React.FC = () => {
         <div className="relative">
           <button
             onClick={() => setPreviewFixId(null)}
-            className="absolute top-2 right-2 z-10 text-xs text-slate-400 hover:text-slate-100 font-mono-code cursor-pointer"
+            className="absolute top-3 right-3 z-10 text-xs text-zinc-400 hover:text-zinc-100 cursor-pointer"
           >
-            Close Preview ✕
+            Close preview ✕
           </button>
           <PreviewCard
             request={{ op: 'apply_fix', fix_id: previewFixId }}
@@ -173,26 +186,24 @@ export const Fixes: React.FC = () => {
       {/* Fix Checklist Cards */}
       {isLoading ? (
         <div className="space-y-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
         </div>
       ) : quickWinsOnly && displayedPlan.length === 0 && plan.length > 0 ? (
-        <div className="p-8 text-center bg-[#0a0f1d] border border-[#1c2638] rounded-lg">
-          <p className="text-xs text-slate-400 font-mono-code">
-            No quick-win recommendations remaining. All remaining fixes require medium or high effort.
-          </p>
+        <Card className="py-8 text-center text-xs text-zinc-400">
+          <p>No low-effort recommendations remaining.</p>
           <Button
-            variant="ghost"
-            size="xs"
+            variant="outline"
+            size="sm"
             onClick={() => setQuickWinsOnly(false)}
             className="mt-3"
           >
-            Show All {plan.length} Recommendations
+            Show all {plan.length} recommendations
           </Button>
-        </div>
+        </Card>
       ) : (
-        <div className="space-y-3.5">
+        <div className="space-y-3">
           {displayedPlan.map((fix) => (
             <FixCard
               key={fix.id}

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { X } from 'lucide-react'
 
 export interface DrawerProps {
   isOpen: boolean
@@ -42,44 +43,42 @@ export const Drawer: React.FC<DrawerProps> = ({
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
 
       <div className="fixed inset-y-0 right-0 flex pl-10" role="dialog" aria-modal="true">
         <div
-          className={`w-screen ${widthStyles} bg-[#0a0f1d] border-l border-[#1c2638] shadow-2xl flex flex-col justify-between transform transition-transform ease-out duration-200`}
+          className={`w-screen ${widthStyles} bg-[#0e0e10] border-l border-zinc-800 shadow-2xl flex flex-col justify-between transform transition-transform ease-out duration-200`}
         >
           {/* Header */}
-          <div className="px-6 py-4 border-b border-[#1c2638] flex items-center justify-between bg-[#0d1322]">
+          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
             <div>
               {title && (
-                <h2 className="text-base font-semibold text-slate-100 uppercase tracking-wide">
+                <h2 className="text-sm font-medium text-zinc-100">
                   {title}
                 </h2>
               )}
-              {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+              {subtitle && <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md text-slate-400 hover:text-slate-100 hover:bg-[#1a233a] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors cursor-pointer"
               aria-label="Close drawer"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 text-sm text-slate-300">
+          <div className="flex-1 overflow-y-auto px-6 py-5 text-sm text-zinc-300">
             {children}
           </div>
 
           {/* Footer */}
           {footer && (
-            <div className="px-6 py-3.5 border-t border-[#1c2638] bg-[#0d1322] flex items-center justify-end gap-3">
+            <div className="px-6 py-3.5 border-t border-zinc-800 bg-zinc-900/80 flex items-center justify-end gap-2">
               {footer}
             </div>
           )}

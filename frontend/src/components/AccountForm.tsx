@@ -37,7 +37,6 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   const [isSaving, setIsSaving] = useState(false)
   const isNew = !initialAccount
 
-  // Catalog prefill
   const handleServiceSelect = (key: string) => {
     const item = catalog?.find((c) => c.key === key)
     if (!item) return
@@ -67,20 +66,20 @@ export const AccountForm: React.FC<AccountFormProps> = ({
           setIsSaving(false)
         }
       }}
-      className="space-y-5"
+      className="space-y-4 text-xs"
     >
       {/* Service Catalog Prefill */}
       {isNew && catalog && (
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-            Prefill from Service Catalog
+        <div className="space-y-1">
+          <label className="block font-medium text-zinc-300">
+            Prefill from service catalog
           </label>
           <select
             value={form.service_key}
             onChange={(e) => handleServiceSelect(e.target.value)}
-            className="w-full bg-[#070b14] border border-[#1c2638] rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-100 focus:outline-none focus:border-zinc-600"
           >
-            <option value="">-- Choose known service or configure custom --</option>
+            <option value="">Choose known service or configure custom</option>
             {catalog.map((c) => (
               <option key={c.key} value={c.key}>
                 {c.name} ({c.type})
@@ -92,9 +91,9 @@ export const AccountForm: React.FC<AccountFormProps> = ({
 
       {/* Basic Info */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-            Account Identifier (Slug)
+        <div className="space-y-1">
+          <label className="block font-medium text-zinc-300">
+            Account slug
           </label>
           <input
             type="text"
@@ -103,13 +102,13 @@ export const AccountForm: React.FC<AccountFormProps> = ({
             value={form.id}
             onChange={(e) => setForm({ ...form, id: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
             placeholder="e.g. google_main"
-            className="w-full bg-[#070b14] border border-[#1c2638] rounded px-3 py-1.5 text-xs text-slate-100 font-mono-code focus:outline-none focus:border-cyan-500 disabled:opacity-50"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-100 font-mono-code focus:outline-none focus:border-zinc-600 disabled:opacity-50"
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-            Service Name
+        <div className="space-y-1">
+          <label className="block font-medium text-zinc-300">
+            Service name
           </label>
           <input
             type="text"
@@ -117,53 +116,50 @@ export const AccountForm: React.FC<AccountFormProps> = ({
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="e.g. Primary Gmail"
-            className="w-full bg-[#070b14] border border-[#1c2638] rounded px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-100 focus:outline-none focus:border-zinc-600"
           />
         </div>
       </div>
 
       {/* Security Credentials */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-            2FA / Second Factor
+        <div className="space-y-1">
+          <label className="block font-medium text-zinc-300">
+            Second factor (2FA)
           </label>
           <select
             value={form.second_factor}
             onChange={(e) => setForm({ ...form, second_factor: e.target.value as SecondFactor })}
-            className="w-full bg-[#070b14] border border-[#1c2638] rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-100 focus:outline-none focus:border-zinc-600"
           >
-            <option value="none">None (Single password/OTP)</option>
-            <option value="sms">SMS OTP Code</option>
-            <option value="authenticator">Authenticator App (TOTP)</option>
-            <option value="hardware_key">Hardware Key (FIDO2/WebAuthn)</option>
+            <option value="none">None (Password only)</option>
+            <option value="sms">SMS verification code</option>
+            <option value="authenticator">Authenticator app (TOTP)</option>
+            <option value="hardware_key">Hardware key (FIDO2)</option>
           </select>
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-            Password Group Label
+        <div className="space-y-1">
+          <label className="block font-medium text-zinc-300">
+            Password group
           </label>
           <input
             type="text"
             value={form.password_group || ''}
             onChange={(e) => setForm({ ...form, password_group: e.target.value.trim() || null })}
-            placeholder="e.g. A, B, or empty if unique"
-            className="w-full bg-[#070b14] border border-[#1c2638] rounded px-3 py-1.5 text-xs text-slate-100 font-mono-code focus:outline-none focus:border-cyan-500"
+            placeholder="e.g. A, B (leave empty if unique)"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-100 focus:outline-none focus:border-zinc-600"
           />
-          <p className="text-[10px] text-slate-400 mt-0.5 italic">
-            Label only — never enter real passwords.
-          </p>
         </div>
       </div>
 
       {/* Recovery Routes */}
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-          Recovery Gates (OR routes)
+      <div className="space-y-2 pt-1">
+        <label className="block font-medium text-zinc-300">
+          Recovery options
         </label>
-        <div className="flex items-center gap-3 text-xs mb-2">
-          <label className="inline-flex items-center gap-2 cursor-pointer text-slate-300">
+        <div className="flex items-center gap-3">
+          <label className="inline-flex items-center gap-2 cursor-pointer text-zinc-300">
             <input
               type="checkbox"
               checked={form.recovery.includes('sms')}
@@ -176,16 +172,16 @@ export const AccountForm: React.FC<AccountFormProps> = ({
                     : prev.recovery.filter((r) => r !== 'sms'),
                 }))
               }}
-              className="rounded bg-[#070b14] border-[#1c2638] text-cyan-500"
+              className="rounded border-zinc-700 bg-zinc-900 accent-zinc-100"
             />
-            <span>SMS Phone Reset</span>
+            <span>SMS phone recovery</span>
           </label>
         </div>
 
         {emailAccounts.length > 0 && (
-          <div>
-            <span className="text-[11px] text-slate-400 block mb-1">Recovery Backup Email:</span>
-            <div className="flex flex-wrap gap-2">
+          <div className="space-y-1 pt-1">
+            <span className="text-xs text-zinc-400">Recovery email account:</span>
+            <div className="flex flex-wrap gap-1.5">
               {emailAccounts.map((ea) => {
                 const key = `email:${ea.id}`
                 const isSelected = form.recovery.includes(key)
@@ -201,13 +197,13 @@ export const AccountForm: React.FC<AccountFormProps> = ({
                           : [...prev.recovery, key],
                       }))
                     }}
-                    className={`px-2.5 py-1 text-xs rounded border font-mono-code ${
+                    className={`px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
                       isSelected
-                        ? 'bg-cyan-950/70 text-cyan-300 border-cyan-700'
-                        : 'bg-[#070b14] text-slate-400 border-[#1c2638]'
+                        ? 'bg-zinc-100 text-zinc-900 border-zinc-100 font-medium'
+                        : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
                     }`}
                   >
-                    {ea.name} ({ea.id})
+                    {ea.name}
                   </button>
                 )
               })}
@@ -217,20 +213,22 @@ export const AccountForm: React.FC<AccountFormProps> = ({
       </div>
 
       {/* Live Ghost Preview for Counterfactual Feedback */}
-      <PreviewCard
-        request={{
-          op: 'upsert_account',
-          account: form,
-        }}
-      />
+      <div className="pt-2">
+        <PreviewCard
+          request={{
+            op: 'upsert_account',
+            account: form,
+          }}
+        />
+      </div>
 
       {/* Buttons */}
-      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#1c2638]">
+      <div className="flex items-center justify-end gap-2 pt-4 border-t border-zinc-800">
         <Button variant="ghost" size="sm" type="button" onClick={onCancel}>
           Cancel
         </Button>
-        <Button variant="primary" size="sm" type="submit" loading={isSaving}>
-          {isNew ? 'Create Account Node' : 'Save Modifications'}
+        <Button size="sm" type="submit" loading={isSaving}>
+          {isNew ? 'Create account' : 'Save changes'}
         </Button>
       </div>
     </form>
